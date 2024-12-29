@@ -9,8 +9,18 @@ class BoardRenderer
     @window = Curses.stdscr
     Curses.curs_set(0)
     Curses.start_color
-    Curses.init_pair(1, Curses::COLOR_BLACK, Curses::COLOR_WHITE) # Black text, white background
-    Curses.init_pair(2, Curses::COLOR_WHITE, Curses::COLOR_BLACK) # black background, white text
+    Curses.use_default_colors
+    
+    Curses.init_color(8,  0, 100, 750) # darkblue figures
+
+    Curses.init_color(9, 500, 500, 500) # lightgrey square
+    Curses.init_color(10, 90, 90, 90) # darkgrey square
+
+    Curses.init_pair(3, COLOR_WHITE, 9) # white figure with white square
+    Curses.init_pair(4, 8, 9) # black figure with white square
+
+    Curses.init_pair(5, COLOR_WHITE, 10) # white figure with black square
+    Curses.init_pair(6, 8, 10) # black figure with black square
   end
 
   def render(board)
@@ -39,7 +49,7 @@ class BoardRenderer
   def draw_files
     column = 2
     'A'.upto('H') do |c|
-      @window.setpos(8, column)
+      @window.setpos(11, column)
       @window.addstr(" #{c} ")
       column += 3
     end
@@ -51,17 +61,18 @@ class BoardRenderer
     @window.setpos(0, 1)
 
     loop do
-      
+
       if square.position[0] == 'A'
         column = 2
         loop do
-          
+
           row = 10 - square.position[1]
-          color = square.color == 'black' ? 2 : 1
+          color = square.color == 'black' ? 6 : 4
           @window.setpos(row, column)
           @window.attron(Curses.color_pair(color)) do
             @window.addstr(" B ")
           end
+          
           column += 3
           break if square.position[0] == 'H'
 
@@ -70,9 +81,9 @@ class BoardRenderer
       elsif square.position[0] == 'H'
         column = 23
         loop do
-          
+
           row = 10 - square.position[1]
-          color = square.color == 'black' ? 2 : 1
+          color = square.color == 'black' ? 6 : 4
           @window.setpos(row, column)
           @window.attron(Curses.color_pair(color)) do
             @window.addstr(" B ")
