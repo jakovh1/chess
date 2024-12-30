@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative './square'
+require_relative './constants/figures'
 
 class Board
   attr_reader :board
@@ -15,6 +16,7 @@ class Board
     last_square = square
     last_square = generate_row(last_square) until last_square.position == ['A', 8]
     last_square = establish_relationships(last_square) until last_square.position == ['A', 1]
+    place_pieces(last_square)
   end
 
   def toggle_color(square)
@@ -99,5 +101,62 @@ class Board
 
     second_square
 
+  end
+
+  def place_pieces(square)
+    loop do
+      if square.position[1] == 1
+        if %w[A H].include?(square.position[0])
+          square.current_piece = WHITE_FIGURES.rook
+          if square.position[0] == 'H'
+            square = square.top_adjacent
+            next
+          end
+        elsif %w[B G].include?(square.position[0])
+          square.current_piece = WHITE_FIGURES.knight
+        elsif %w[C F].include?(square.position[0])
+          square.current_piece = WHITE_FIGURES.bishop
+        elsif square.position[0] == 'D'
+          square.current_piece = WHITE_FIGURES.queen
+        elsif square.position[0] == 'E'
+          square.current_piece = WHITE_FIGURES.king
+        end
+        square = square.right_adjacent
+      elsif square.position[1] == 2
+        square.current_piece = WHITE_FIGURES.pawn
+        if square.position[0] == 'A'
+          square = square.top_adjacent
+          next
+        end
+        square = square.left_adjacent
+        
+      elsif square.position[1] == 7
+        square.current_piece = BLACK_FIGURES.pawn
+        if square.position[0] == 'H'
+          square = square.top_adjacent
+          next
+        end
+        square = square.right_adjacent
+      elsif square.position[1] == 8
+        if %w[A H].include?(square.position[0])
+          square.current_piece = BLACK_FIGURES.rook
+        elsif %w[B G].include?(square.position[0])
+          square.current_piece = BLACK_FIGURES.knight
+        elsif %w[C F].include?(square.position[0])
+          square.current_piece = BLACK_FIGURES.bishop
+        elsif square.position[0] == 'D'
+          square.current_piece = BLACK_FIGURES.queen
+        elsif square.position[0] == 'E'
+          square.current_piece = BLACK_FIGURES.king
+        end
+        break if square.position == ['A', 8]
+        
+        square = square.left_adjacent
+      else
+        square = square.top_adjacent
+      end
+      
+
+    end
   end
 end

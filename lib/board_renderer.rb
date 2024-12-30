@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'curses'
+require_relative './constants/figures'
 
 class BoardRenderer
   include Curses
@@ -10,17 +11,11 @@ class BoardRenderer
     Curses.curs_set(0)
     Curses.start_color
     Curses.use_default_colors
-    
-    Curses.init_color(8,  0, 100, 750) # darkblue figures
 
-    Curses.init_color(9, 500, 500, 500) # lightgrey square
-    Curses.init_color(10, 90, 90, 90) # darkgrey square
+    Curses.init_color(3, 11, 255, 139) # color for black square
 
-    Curses.init_pair(3, COLOR_WHITE, 9) # white figure with white square
-    Curses.init_pair(4, 8, 9) # black figure with white square
-
-    Curses.init_pair(5, COLOR_WHITE, 10) # white figure with black square
-    Curses.init_pair(6, 8, 10) # black figure with black square
+    Curses.init_pair(1, COLOR_BLACK, COLOR_WHITE) # white square
+    Curses.init_pair(2, COLOR_BLACK, 3) # black square
   end
 
   def render(board)
@@ -67,12 +62,11 @@ class BoardRenderer
         loop do
 
           row = 10 - square.position[1]
-          color = square.color == 'black' ? 6 : 4
+          color = square.color == 'black' ? 2 : 1
           @window.setpos(row, column)
           @window.attron(Curses.color_pair(color)) do
-            @window.addstr(" B ")
+            @window.addstr(" #{square.current_piece || ' '} ")
           end
-          
           column += 3
           break if square.position[0] == 'H'
 
@@ -83,10 +77,10 @@ class BoardRenderer
         loop do
 
           row = 10 - square.position[1]
-          color = square.color == 'black' ? 6 : 4
+          color = square.color == 'black' ? 2 : 1
           @window.setpos(row, column)
           @window.attron(Curses.color_pair(color)) do
-            @window.addstr(" B ")
+            @window.addstr(" #{square.current_piece || ' '} ")
           end
           column -= 3
           break if square.position[0] == 'A'
