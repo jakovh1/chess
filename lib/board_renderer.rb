@@ -8,23 +8,31 @@ class BoardRenderer
 
   def initialize
     @window = Curses.stdscr
-    Curses.curs_set(0)
+    
     Curses.start_color
     Curses.use_default_colors
+    
 
-    Curses.init_color(3, 11, 255, 139) # color for black square
+    Curses.init_color(3, 600, 600, 100) # color for black square
+    Curses.init_color(4, 900, 500, 200) # background color for available position square
 
     Curses.init_pair(1, COLOR_BLACK, COLOR_WHITE) # white square
     Curses.init_pair(2, COLOR_BLACK, 3) # black square
+    Curses.init_pair(3, COLOR_BLACK, COLOR_CYAN) # cursor square
+    Curses.init_pair(5, COLOR_BLACK, 4) # available position square pair
   end
 
-  def render(board)
+  def render(board, current_player, available_positions = nil, message = nil, captured_pieces = nil)
     @window.clear
+    show_current_player(current_player)
     draw_ranks
     draw_files
     draw_squares(board)
+    highlight_available_positions(available_positions) if available_positions
+    show_message(message) if message
+    show_captured_pieces(captured_pieces[0], captured_pieces[1]) if captured_pieces
+    draw_cursor(board)
     @window.refresh
-    sleep(10)
   end
 
   def close
@@ -32,6 +40,22 @@ class BoardRenderer
   end
 
   private
+
+  def show_current_player(color)
+    Curses.setpos(0, 0)
+    Curses.curs_set(1)
+    Curses.addstr("#{color} player has the move.")
+  end
+
+  def draw_cursor(board)
+    Curses.curs_set(2)
+    Curses.attron(Curses.color_pair(3)) do
+      Curses.setpos(board.cursor_y, board.cursor_x)
+      Curses.addstr(" #{board.current_square.current_piece || ' '} ")
+    end
+    Curses.setpos(board.cursor_y, board.cursor_x)
+    Curses.curs_set(0)
+  end
 
   def draw_ranks
     8.downto(1) do |c|
@@ -44,9 +68,29 @@ class BoardRenderer
   def draw_files
     column = 2
     'A'.upto('H') do |c|
-      @window.setpos(11, column)
+      @window.setpos(10, column)
       @window.addstr(" #{c} ")
       column += 3
+    end
+  end
+
+  def show_message(message)
+    @window.setpos(13, 2)
+    @window.addstr(message)
+  end
+
+  def show_captured_pieces(black_captured, white_captured)
+    col = 2
+    white_captured.each do |piece|
+      @window.setpos(1, col)
+      @window.addstr(piece)
+      col += 2
+    end
+    col = 2
+    black_captured.each do |piece|
+      @window.setpos(11, col)
+      @window.addstr(piece)
+      col += 2
     end
   end
 
@@ -92,6 +136,21 @@ class BoardRenderer
 
       square = square.bottom_adjacent
     end
+  end
+
+  def highlight_available_positions(available_positions)
+    available_positions.each do |position|
+      position = translate_position(position)
+      @window.setpos(position[1], position[0])
+      @window.attron(Curses.color_pair(5)) do
+        @window.addstr(' ')
+      end
+    end
+    @window.attroff(Curses.color_pair(5))
+  end
+
+  def translate_position(position)
+    [3 * position[0].ord - 193, -2 * position[1] + 10 + position[1]]
   end
 
   def log_positions(board)

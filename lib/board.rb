@@ -4,19 +4,23 @@ require_relative './square'
 require_relative './constants/figures'
 
 class Board
-  attr_reader :board
-  def initialize()
+  attr_accessor :board, :cursor_x, :cursor_y, :current_square
+
+  def initialize(white_player, black_player)
     @board = Square.new('black', ['A', 1], nil, nil, nil, nil, nil, nil, nil, nil, nil)
-    generate_board(@board)
+    @cursor_x = 2
+    @cursor_y = 9
+    @current_square = @board
+    generate_board(@board, white_player, black_player)
   end
 
   private
 
-  def generate_board(square)
+  def generate_board(square, white_player, black_player)
     last_square = square
     last_square = generate_row(last_square) until last_square.position == ['A', 8]
     last_square = establish_relationships(last_square) until last_square.position == ['A', 1]
-    place_pieces(last_square)
+    place_pieces(last_square, white_player, black_player)
   end
 
   def toggle_color(square)
@@ -103,35 +107,43 @@ class Board
 
   end
 
-  def place_pieces(square)
+  def place_pieces(square, white_player, black_player)
     loop do
       if square.position[1] == 1
         if %w[A H].include?(square.position[0])
           square.current_piece = WHITE_FIGURES.rook
+          white_player.active_squares[:rook].push(square)
           if square.position[0] == 'H'
             square = square.top_adjacent
             next
           end
         elsif %w[B G].include?(square.position[0])
           square.current_piece = WHITE_FIGURES.knight
+          white_player.active_squares[:knight].push(square)
         elsif %w[C F].include?(square.position[0])
           square.current_piece = WHITE_FIGURES.bishop
+          white_player.active_squares[:bishop].push(square)
         elsif square.position[0] == 'D'
           square.current_piece = WHITE_FIGURES.queen
+          white_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
           square.current_piece = WHITE_FIGURES.king
+          white_player.active_squares[:king] = [square]
         end
         square = square.right_adjacent
       elsif square.position[1] == 2
         square.current_piece = WHITE_FIGURES.pawn
+        white_player.active_squares[:pawn].push(square)
         if square.position[0] == 'A'
           square = square.top_adjacent
+          white_player.active_squares[:pawn].push(square)
           next
         end
         square = square.left_adjacent
         
       elsif square.position[1] == 7
         square.current_piece = BLACK_FIGURES.pawn
+        black_player.active_squares[:pawn].push(square)
         if square.position[0] == 'H'
           square = square.top_adjacent
           next
@@ -140,14 +152,19 @@ class Board
       elsif square.position[1] == 8
         if %w[A H].include?(square.position[0])
           square.current_piece = BLACK_FIGURES.rook
+          black_player.active_squares[:rook].push(square)
         elsif %w[B G].include?(square.position[0])
           square.current_piece = BLACK_FIGURES.knight
+          black_player.active_squares[:knight].push(square)
         elsif %w[C F].include?(square.position[0])
           square.current_piece = BLACK_FIGURES.bishop
+          black_player.active_squares[:bishop].push(square)
         elsif square.position[0] == 'D'
           square.current_piece = BLACK_FIGURES.queen
+          black_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
           square.current_piece = BLACK_FIGURES.king
+          black_player.active_squares[:king] = [square]
         end
         break if square.position == ['A', 8]
         
