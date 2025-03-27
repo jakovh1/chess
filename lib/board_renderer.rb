@@ -8,10 +8,9 @@ class BoardRenderer
 
   def initialize
     @window = Curses.stdscr
-    
+
     Curses.start_color
     Curses.use_default_colors
-    
 
     Curses.init_color(3, 600, 600, 100) # color for black square
     Curses.init_color(4, 900, 500, 200) # background color for available position square
@@ -138,6 +137,7 @@ class BoardRenderer
     end
   end
 
+  # Highlights available positions if there are any when a piece is selected.
   def highlight_available_positions(available_positions)
     available_positions.each do |position|
       position = translate_position(position)
@@ -149,34 +149,35 @@ class BoardRenderer
     @window.attroff(Curses.color_pair(5))
   end
 
+  # Translates chess-board files and ranks to Curses cursor's coordinates.
   def translate_position(position)
     [3 * position[0].ord - 193, -2 * position[1] + 10 + position[1]]
   end
 
-  def log_positions(board)
-    square = board.board
-    square = square.top_adjacent until square.top_adjacent.nil?
-    p square.position[1]
-    loop do
-      if square.position[0] == 'A'
+  # def log_positions(board)
+  #   square = board.board
+  #   square = square.top_adjacent until square.top_adjacent.nil?
+  #   p square.position[1]
+  #   loop do
+  #     if square.position[0] == 'A'
         
-        loop do
-          puts "#{square.position[0]} #{square.position[1]}"
-          break if square.position[0] == 'H'
+  #       loop do
+  #         puts "#{square.position[0]} #{square.position[1]}"
+  #         break if square.position[0] == 'H'
 
-          square = square.right_adjacent
-        end
+  #         square = square.right_adjacent
+  #       end
         
-      elsif square.position[0] == 'H'
-        loop do
-          puts "#{square.position[0]} #{square.position[1]}"
-          
+  #     elsif square.position[0] == 'H'
+  #       loop do
+  #         puts "#{square.position[0]} #{square.position[1]}"
+        
 
-          square = square.left_adjacent
-        end
-      end
-      break if square.left_adjacent.nil? && square.position == ['A', 1]
-      square = square.bottom_adjacent
-    end
-  end
+  #         square = square.left_adjacent
+  #       end
+  #     end
+  #     break if square.left_adjacent.nil? && square.position == ['A', 1]
+  #     square = square.bottom_adjacent
+  #   end
+  # end
 end

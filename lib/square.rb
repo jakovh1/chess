@@ -15,6 +15,5 @@ class Square
     @bottom_left_adjacent = bottom_left_adjacent
     @left_adjacent = left_adjacent
     @left_top_adjacent = left_top_adjacent
-    @movable = []
   end
 end

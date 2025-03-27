@@ -15,7 +15,4 @@ class Player
       king: []
     }
   end
-
-  def make_move(board)
-  end
 end

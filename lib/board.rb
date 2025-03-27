@@ -23,12 +23,14 @@ class Board
     place_pieces(last_square, white_player, black_player)
   end
 
+  # toggles the square background color
   def toggle_color(square)
     return 'white' if square.color == 'black'
 
     'black'
   end
 
+  # generates squares (nodes) in a row, returns the latest generated
   def generate_row(square)
     current_square = square
     if current_square.position[0] == 'A'
@@ -67,7 +69,7 @@ class Board
     end
 
     second_square = square.bottom_adjacent
-
+    # establishes relationships from the most-right square to the most-left square
     if second_square.position[0] == 'H'
 
       until second_square.position[0] == 'A'
@@ -84,7 +86,7 @@ class Board
         second_square = second_square.left_adjacent
 
       end
-
+    # establishes relationships from the most-right square to the most-left square
     elsif second_square.position[0] == 'A'
 
       until second_square.position[0] == 'H'
@@ -104,12 +106,14 @@ class Board
     end
 
     second_square
-
   end
 
+  # Traverse through the board and place pieces onto their inital posiitons.
   def place_pieces(square, white_player, black_player)
     loop do
-      if square.position[1] == 1
+      case square.position[1]
+      # 1 and 2 cases (ranks) place white pieces
+      when 1
         if %w[A H].include?(square.position[0])
           square.current_piece = WHITE_FIGURES.rook
           white_player.active_squares[:rook].push(square)
@@ -131,7 +135,7 @@ class Board
           white_player.active_squares[:king] = [square]
         end
         square = square.right_adjacent
-      elsif square.position[1] == 2
+      when 2
         square.current_piece = WHITE_FIGURES.pawn
         white_player.active_squares[:pawn].push(square)
         if square.position[0] == 'A'
@@ -140,8 +144,8 @@ class Board
           next
         end
         square = square.left_adjacent
-        
-      elsif square.position[1] == 7
+      # 7 and 8 cases (ranks) place black pieces
+      when 7
         square.current_piece = BLACK_FIGURES.pawn
         black_player.active_squares[:pawn].push(square)
         if square.position[0] == 'H'
@@ -149,7 +153,7 @@ class Board
           next
         end
         square = square.right_adjacent
-      elsif square.position[1] == 8
+      when 8
         if %w[A H].include?(square.position[0])
           square.current_piece = BLACK_FIGURES.rook
           black_player.active_squares[:rook].push(square)
@@ -167,13 +171,11 @@ class Board
           black_player.active_squares[:king] = [square]
         end
         break if square.position == ['A', 8]
-        
+
         square = square.left_adjacent
       else
         square = square.top_adjacent
       end
-      
-
     end
   end
 end
