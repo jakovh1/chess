@@ -44,6 +44,10 @@ class Game
         # Stores the current king's square in the variable to access it later for check checkup
         current_king = instance_variable_get("@#{@current_player.downcase}_player").active_squares[:king].first
 
+        # Checks whether current king is checked.
+        is_king_checked = check_checkup(current_king)
+        @message = 'The king is checked.' if is_king_checked[0]
+
         # Renders the board to the terminal.
         board_renderer.render(board, @current_player, @available_positions, @message, [@white_player.captured_pieces, @black_player.captured_pieces])
 
@@ -106,7 +110,7 @@ class Game
             when '♛', '♕'
               @available_positions = MOVEMENT_RULES[:rook].call(board.current_square, @inactive_player, DIRECTION_RULES[:queen])
             when '♔', '♚'
-              @available_positions = MOVEMENT_RULES[:king].call(board.current_square, @inactive_player, DIRECTION_RULES[:queen])
+              @available_positions = MOVEMENT_RULES[:king].call(board.current_square, @inactive_player, DIRECTION_RULES[:queen], instance_variable_get("@#{@current_player.downcase}_player"))
             end
             @old_square = board.current_square
             @message = 'Press "u" if you want to unselect currently selected piece.'
@@ -135,7 +139,15 @@ class Game
             # Puts player's selected piece onto the selected square.
             board.current_square.current_piece = @clipboard_figure
 
-            update_piece_squares(player, board)
+            if !player.active_squares[:king][1] && ['♔', '♚'].include?(@clipboard_figure) && %w[C G].include?(board.current_square.position[0])
+              castling_handler(board, player)
+            end
+
+            update_piece_squares(player, board.current_square)
+
+            if !player.active_squares[:king][1] && %w[A H].include?(@old_square.position[0]) && !player.public_send("#{@old_square.position[0].downcase}_rook_moved") && ['♖', '♜'].include?(@clipboard_figure)
+              player.public_send("#{@old_square.position[0].downcase}_rook_moved=", true)
+            end
 
             # Reseting everything to nil for the next move.
             @clipboard_figure = nil
@@ -157,9 +169,8 @@ class Game
           break
         end
 
-        # Checks whether current king is checked.
-        is_king_checked = check_checkup(current_king)
-        @message = 'The king is checked.' if is_king_checked[0]
+     
+
       end
     ensure
       Curses.clear
@@ -195,17 +206,17 @@ class Game
   end
 
   # Updates the player's piece and its new square.
-  def update_piece_squares(player, board)
+  def update_piece_squares(player, square)
     case @clipboard_figure
     when '♛', '♕'
-      player.active_squares[:queen] = [board.current_square]
+      player.active_squares[:queen] = [square]
     when '♔', '♚'
-      player.active_squares[:king] = [board.current_square]
+      player.active_squares[:king] = [square, true]
     else
       active_squares_piece = player.active_squares[PIECE_UNICODE[@current_player.to_sym].key(@clipboard_figure)]
       active_squares_piece.each_with_index do |figure, i|
         if figure.position == @old_square.position
-          active_squares_piece[i] = board.current_square
+          active_squares_piece[i] = square
           break
         end
       end
@@ -231,5 +242,26 @@ class Game
       @old_square = current_square
       @message = 'Press "u" if you want to unselect currently selected piece'
     end
+  end
+
+  def castling_handler(board, player)
+    new_square = nil
+    aux_old_square = @old_square
+    aux_clipboard_figure = @clipboard_figure
+    if board.current_square.position[0] == 'G'
+      board.current_square.left_adjacent.current_piece = board.current_square.right_adjacent.current_piece
+      board.current_square.right_adjacent.current_piece = nil
+      new_square = board.current_square.left_adjacent
+      @old_square = board.current_square.right_adjacent
+    elsif board.current_square.position[0] == 'C'
+      board.current_square.right_adjacent.current_piece = board.current_square.left_adjacent.left_adjacent.current_piece
+      board.current_square.left_adjacent.left_adjacent.current_piece = nil
+      new_square = board.current_square.right_adjacent
+      @old_square = board.current_square.left_adjacent.left_adjacent
+    end
+    @clipboard_figure = new_square.current_piece
+    update_piece_squares(player, new_square)
+    @old_square = aux_old_square
+    @clipboard_figure = aux_clipboard_figure
   end
 end

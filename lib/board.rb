@@ -132,7 +132,7 @@ class Board
           white_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
           square.current_piece = WHITE_FIGURES.king
-          white_player.active_squares[:king] = [square]
+          white_player.active_squares[:king] = [square, false]
         end
         square = square.right_adjacent
       when 2
@@ -168,7 +168,7 @@ class Board
           black_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
           square.current_piece = BLACK_FIGURES.king
-          black_player.active_squares[:king] = [square]
+          black_player.active_squares[:king] = [square, false]
         end
         break if square.position == ['A', 8]
 

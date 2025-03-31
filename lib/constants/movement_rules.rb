@@ -10,7 +10,7 @@ module MovementRules
     knight: ->(start_square, opponent_color, directions) { generate_knight_moves(start_square, opponent_color, directions) },
     bishop: ->(start_square, opponent_color, directions) { generate_linear_moves(start_square, opponent_color, directions) },
     queen: ->(start_square, opponent_color, directions) { generate_linear_moves(start_square, opponent_color, directions) },
-    king: ->(start_square, opponent_color, directions) { generate_king_moves(start_square, opponent_color, directions) }
+    king: ->(start_square, opponent_color, directions, current_player) { generate_king_moves(start_square, opponent_color, directions, current_player) }
   }.freeze
 end
 
@@ -47,7 +47,7 @@ end
 # - Checks if moving the king to each square would result in a check.
 # - Skips square where the king would be in check.
 # - Adds safe squares to the result array.
-def generate_king_moves(start_square, opponent_color, directions)
+def generate_king_moves(start_square, opponent_color, directions, current_player)
   positions = []
   directions.each do |direction|
     square = start_square.public_send("#{direction}_adjacent")
@@ -67,7 +67,51 @@ def generate_king_moves(start_square, opponent_color, directions)
       positions.push(square.position)
     end
   end
-  positions
+  positions + castling_check(start_square, opponent_color, current_player)
+end
+
+def castling_check(start_square, opponent_color, current_player)
+  result = []
+  return result if current_player.active_squares[:king][1]
+
+  directions = %w[left_adjacent right_adjacent]
+
+  directions.each do |direction|
+    square = start_square
+    c = direction == directions[0] ? 3 : 2
+    next if c == 3 && current_player.a_rook_moved
+
+    next if c == 2 && current_player.h_rook_moved
+
+    loop_counter = 0
+
+    c.times do
+      square = square.public_send("#{direction}")
+      break unless square.current_piece.nil?
+
+      break if king_checked?(square, opponent_color, DIRECTIONS, 'rook')[0]
+
+      break if king_checked?(square, opponent_color, BISHOP_DIRECTIONS, 'bishop')[0]
+
+      break if king_checked?(square, opponent_color, DIRECTIONS + BISHOP_DIRECTIONS, 'queen')[0]
+
+      break if attacked_by_knight?(square, opponent_color)[0]
+
+      break if attacked_by_pawn?(square, opponent_color)[0]
+
+      break if attacked_by_king?(square, opponent_color)
+
+      loop_counter += 1
+    end
+    next if loop_counter != c
+
+    if c == 3
+      result.push(square.right_adjacent.position)
+    else
+      result.push(square.position)
+    end
+  end
+  result
 end
 
 # Generates all possible legal moves for a knight.
