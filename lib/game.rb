@@ -74,46 +74,34 @@ class Game
           end
         when 10
 
-          # Checks whether king is checked and whether current player selects non-king piece.
-          if is_king_checked[0] && Object.const_get("#{@current_player}_FIGURES_FOR_CHECK").include?(board.current_square.current_piece) && @clipboard_figure.nil?
-
-            # Filters out the array of king's checks to keep only the squares from which the king is checked.
-            attacker = is_king_checked[1].select { |subarray| subarray.first == true }
-
-            # Checks if a king is checked by only one piece, since if it is a double-check, only the king movement is allowed.
-            # The following block generates movable positions if a selected piece can interrupt the check.
-            if attacker.length == 1 && attacker.first.length == 2
-
-              # Retrieves and stores the hash of player's pieces.
-              current_player_pieces = instance_variable_get("@#{@current_player.downcase}_player").active_squares
-
-              # Generates positions between an attacker and king, including attacker's square.
-              interpositions = generate_interposition_squares(attacker[0][1], current_king)
-
-              # Generates possible positions (for the selected piece) that would interrupt the check.
-              generate_movable_positions(interpositions, current_player_pieces, board.current_square)
-            end
-
           # The following block will be executed if king is not checked, and current player's piece is selected.
           # It generates available positions for selected piece.
-          elsif @clipboard_figure.nil? && Object.const_get("#{@current_player.upcase}_FIGURES").values.include?(board.current_square.current_piece)
-            @clipboard_figure = board.current_square.current_piece
-            case @clipboard_figure
+          if @clipboard_figure.nil? && Object.const_get("#{@current_player.upcase}_FIGURES").values.include?(board.current_square.current_piece)
+            case board.current_square.current_piece
             when '♙', '♟'
               @available_positions = MOVEMENT_RULES[:pawn].call(board.current_square)
+              filter_available_positions(board, current_king)
             when '♖', '♜'
               @available_positions = MOVEMENT_RULES[:rook].call(board.current_square, @inactive_player, DIRECTIONS)
+              filter_available_positions(board, current_king)
             when '♞', '♘'
               @available_positions = MOVEMENT_RULES[:knight].call(board.current_square, @inactive_player, DIRECTIONS)
+              filter_available_positions(board, current_king)
             when '♗', '♝'
               @available_positions = MOVEMENT_RULES[:bishop].call(board.current_square, @inactive_player, BISHOP_DIRECTIONS)
+              filter_available_positions(board, current_king)
             when '♛', '♕'
               @available_positions = MOVEMENT_RULES[:rook].call(board.current_square, @inactive_player, DIRECTION_RULES[:queen])
+              filter_available_positions(board, current_king)
             when '♔', '♚'
               @available_positions = MOVEMENT_RULES[:king].call(board.current_square, @inactive_player, DIRECTION_RULES[:queen], instance_variable_get("@#{@current_player.downcase}_player"))
             end
-            @old_square = board.current_square
-            @message = 'Press "u" if you want to unselect currently selected piece.'
+            unless @available_positions.empty?
+
+              @clipboard_figure = board.current_square.current_piece
+              @old_square = board.current_square
+              @message = 'Press "u" if you want to unselect currently selected piece.'
+            end
 
           # The following block moves selected piece and captures the opponent's piece if it occupies selected square.
           elsif @available_positions.include?(board.current_square.position) && !@clipboard_figure.nil?
@@ -244,6 +232,7 @@ class Game
     end
   end
 
+  # Handles the castling
   def castling_handler(board, player)
     new_square = nil
     aux_old_square = @old_square
@@ -263,5 +252,20 @@ class Game
     update_piece_squares(player, new_square)
     @old_square = aux_old_square
     @clipboard_figure = aux_clipboard_figure
+  end
+
+  def filter_available_positions(board, king)
+    aux_variable = board.current_square.current_piece
+    board.current_square.current_piece = nil
+    is_king_checked = check_checkup(king)
+
+    if is_king_checked[0]
+      attacker = is_king_checked[1].select { |subarray| subarray.first == true }
+      interpositions = generate_interposition_squares(attacker[0][1], king)
+      @available_positions = interpositions & @available_positions
+    end
+
+    board.current_square.current_piece = aux_variable
+    @available_positions
   end
 end

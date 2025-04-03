@@ -49,6 +49,8 @@ end
 # - Adds safe squares to the result array.
 def generate_king_moves(start_square, opponent_color, directions, current_player)
   positions = []
+  aux_variable = start_square.current_piece
+  start_square.current_piece = nil
   directions.each do |direction|
     square = start_square.public_send("#{direction}_adjacent")
     if square && (square.current_piece.nil? || Object.const_get("#{opponent_color.upcase}_FIGURES").include?(square.current_piece))
@@ -67,6 +69,7 @@ def generate_king_moves(start_square, opponent_color, directions, current_player
       positions.push(square.position)
     end
   end
+  start_square.current_piece = aux_variable
   positions + castling_check(start_square, opponent_color, current_player)
 end
 
