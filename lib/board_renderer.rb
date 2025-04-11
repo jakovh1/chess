@@ -21,7 +21,7 @@ class BoardRenderer
     Curses.init_pair(5, COLOR_BLACK, 4) # available position square pair
   end
 
-  def render(board, current_player, available_positions = nil, message = nil, captured_pieces = nil)
+  def render(board, current_player, available_positions = nil, message = nil)
     @window.clear
     show_current_player(current_player)
     draw_ranks
@@ -29,7 +29,7 @@ class BoardRenderer
     draw_squares(board)
     highlight_available_positions(available_positions) if available_positions
     show_message(message) if message
-    show_captured_pieces(captured_pieces[0], captured_pieces[1]) if captured_pieces
+    show_captured_pieces(board) if board.white_captured_pieces || board.black_captured_pieces
     draw_cursor(board)
     @window.refresh
   end
@@ -50,7 +50,13 @@ class BoardRenderer
     Curses.curs_set(2)
     Curses.attron(Curses.color_pair(3)) do
       Curses.setpos(board.cursor_y, board.cursor_x)
-      Curses.addstr(" #{board.current_square.current_piece || ' '} ")
+      if ![1, 11].include?(board.cursor_y)
+        Curses.addstr(" #{board.current_square&.current_piece&.symbol || ' '} ")
+      elsif board.cursor_y == 1
+        Curses.addstr(" #{board.current_white_captured_piece.symbol || ' '} ")
+      elsif board.cursor_y == 11
+        Curses.addstr(" #{board.current_black_captured_piece.symbol || ' '} ")
+      end
     end
     Curses.setpos(board.cursor_y, board.cursor_x)
     Curses.curs_set(0)
@@ -78,18 +84,24 @@ class BoardRenderer
     @window.addstr(message)
   end
 
-  def show_captured_pieces(black_captured, white_captured)
-    col = 2
-    white_captured.each do |piece|
+  def show_captured_pieces(board)
+    col = 3
+    
+    current_piece = board.white_captured_pieces
+    until current_piece.nil?
       @window.setpos(1, col)
-      @window.addstr(piece)
-      col += 2
+      @window.addstr(current_piece.symbol)
+      current_piece = current_piece.right_adjacent
+      col += 3
     end
-    col = 2
-    black_captured.each do |piece|
+    col = 3
+   
+    current_piece = board.black_captured_pieces
+    while current_piece
       @window.setpos(11, col)
-      @window.addstr(piece)
-      col += 2
+      @window.addstr(current_piece.symbol)
+      current_piece = current_piece.right_adjacent
+      col += 3
     end
   end
 
@@ -108,7 +120,7 @@ class BoardRenderer
           color = square.color == 'black' ? 2 : 1
           @window.setpos(row, column)
           @window.attron(Curses.color_pair(color)) do
-            @window.addstr(" #{square.current_piece || ' '} ")
+            @window.addstr(" #{square.current_piece&.symbol || ' '} ")
           end
           column += 3
           break if square.position[0] == 'H'
@@ -123,7 +135,7 @@ class BoardRenderer
           color = square.color == 'black' ? 2 : 1
           @window.setpos(row, column)
           @window.attron(Curses.color_pair(color)) do
-            @window.addstr(" #{square.current_piece || ' '} ")
+            @window.addstr(" #{square.current_piece&.symbol || ' '} ")
           end
           column -= 3
           break if square.position[0] == 'A'

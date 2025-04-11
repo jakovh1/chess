@@ -1,26 +1,17 @@
 # frozen_string_literal: true
 
 require_relative './square'
-require_relative './pawn'
-require_relative './bishop'
-require_relative './queen'
-require_relative './king'
-require_relative './knight'
-require_relative './rook'
-#require_relative './constants/figures'
+require_relative './piece'
+require_relative './constants/figures'
 
 class Board
-  attr_accessor :board, :cursor_x, :cursor_y, :current_square, :white_captured_pieces, :black_captured_pieces, :current_white_captured_piece, :current_black_captured_piece
+  attr_accessor :board, :cursor_x, :cursor_y, :current_square
 
   def initialize(white_player, black_player)
     @board = Square.new('black', ['A', 1], nil, nil, nil, nil, nil, nil, nil, nil, nil)
     @cursor_x = 2
     @cursor_y = 9
     @current_square = @board
-    @white_captured_pieces = nil
-    @current_white_captured_piece = @white_captured_pieces
-    @black_captured_pieces = nil
-    @current_black_captured_piece = @black_captured_pieces
     generate_board(@board, white_player, black_player)
   end
 
@@ -125,28 +116,28 @@ class Board
       # 1 and 2 cases (ranks) place white pieces
       when 1
         if %w[A H].include?(square.position[0])
-          square.current_piece = Rook.new(:White)
+          square.current_piece = Piece.new(:White, :rook)
           white_player.active_squares[:rook].push(square)
           if square.position[0] == 'H'
             square = square.top_adjacent
             next
           end
         elsif %w[B G].include?(square.position[0])
-          square.current_piece = Knight.new(:White)
+          square.current_piece = Piece.new(:White, :knight)
           white_player.active_squares[:knight].push(square)
         elsif %w[C F].include?(square.position[0])
-          square.current_piece = Bishop.new(:White)
+          square.current_piece = Piece.new(:White, :bishop)
           white_player.active_squares[:bishop].push(square)
         elsif square.position[0] == 'D'
-          square.current_piece = Queen.new(:White)
+          square.current_piece = Piece.new(:White, :queen)
           white_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
-          square.current_piece = King.new(:White)
+          square.current_piece = Piece.new(:White, :king)
           white_player.active_squares[:king] = [square, false]
         end
         square = square.right_adjacent
       when 2
-        square.current_piece = Pawn.new(:White)
+        square.current_piece = Piece.new(:White, :pawn)
         white_player.active_squares[:pawn].push(square)
         if square.position[0] == 'A'
           square = square.top_adjacent
@@ -156,7 +147,7 @@ class Board
         square = square.left_adjacent
       # 7 and 8 cases (ranks) place black pieces
       when 7
-        square.current_piece = Pawn.new(:Black)
+        square.current_piece = Piece.new(:Black, :pawn)
         black_player.active_squares[:pawn].push(square)
         if square.position[0] == 'H'
           square = square.top_adjacent
@@ -165,19 +156,19 @@ class Board
         square = square.right_adjacent
       when 8
         if %w[A H].include?(square.position[0])
-          square.current_piece = Rook.new(:Black)
+          square.current_piece = Piece.new(:Black, :rook)
           black_player.active_squares[:rook].push(square)
         elsif %w[B G].include?(square.position[0])
-          square.current_piece = Knight.new(:Black)
+          square.current_piece = Piece.new(:Black, :knight)
           black_player.active_squares[:knight].push(square)
         elsif %w[C F].include?(square.position[0])
-          square.current_piece = Bishop.new(:Black)
+          square.current_piece = Piece.new(:Black, :bishop)
           black_player.active_squares[:bishop].push(square)
         elsif square.position[0] == 'D'
-          square.current_piece = Queen.new(:Black)
+          square.current_piece = Piece.new(:Black, :queen)
           black_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
-          square.current_piece = King.new(:Black)
+          square.current_piece = Piece.new(:Black, :king)
           black_player.active_squares[:king] = [square, false]
         end
         break if square.position == ['A', 8]

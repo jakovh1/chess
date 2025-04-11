@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 class Player
-  attr_accessor :color, :captured_pieces, :active_squares, :a_rook_moved, :h_rook_moved
+  attr_accessor :color, :captured_pieces, :active_squares, :a_rook_moved, :h_rook_moved, :recently_moved_pawn
 
   def initialize(color)
     @color = color
-    @captured_pieces = []
+    @captured_pieces = nil
     @active_squares = {
       rook: [],
       knight: [],
@@ -14,7 +14,9 @@ class Player
       queen: [],
       king: []
     }
+    @recently_moved_pawn = nil
     @a_rook_moved = false
     @h_rook_moved = false
   end
+
 end
