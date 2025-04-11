@@ -97,9 +97,9 @@ class Game
 
             # Checks whether selected square is occupied by opponent's piece and deletes (captures) it if it is.
             if @inactive_player == current_piece&.color && current_piece.name != :king
-              capture_handler(board) if current_piece.name != :pawn
+              
 
-              opponent_squares_piece = opponent.active_squares[PIECE_UNICODE[@inactive_player.to_sym].key(board.current_square.current_piece.symbol)]
+              opponent_squares_piece = opponent.active_squares[PIECE_UNICODE[@inactive_player].key(board.current_square.current_piece.symbol)]
 
               opponent_squares_piece.each_with_index do |piece, i|
                 if piece.position == board.current_square.position
@@ -107,8 +107,9 @@ class Game
                   break
                 end
               end
+              capture_handler(board) if current_piece.name != :pawn
             end
-
+            
             # Puts player's selected piece onto the selected square.
             board.current_square.current_piece = @clipboard_figure
 
@@ -119,8 +120,9 @@ class Game
             @old_square.current_piece = nil
             # En passant capture handler
             if board.current_square.current_piece.is_a?(Pawn)
-              
-              if @current_player == :White
+              if [1, 8].include?(board.current_square.position[1])
+                promotion_handler(board, board_renderer)
+              elsif @current_player == :White
                 if board.current_square.bottom_adjacent.current_piece.is_a?(Pawn) && board.current_square.bottom_adjacent.current_piece.en_passant_target& 
                   opponent_squares_piece = opponent.active_squares[:pawn]
 
@@ -132,39 +134,8 @@ class Game
                   end
 
                   board.current_square.bottom_adjacent.current_piece = nil
-                elsif board.current_square.position[1] == 8
-                  aux_cursor_x = board.cursor_x
-                  aux_cursor_y = board.cursor_y
-                  board.cursor_x = 2
-                  board.cursor_y = 1
-                  board.current_white_captured_piece = board.white_captured_pieces
-                  @message = 'Choose a piece for promotion.'
-                  @available_positions = []
-                  board_renderer.render(board, @current_player, @available_positions, @message)
-                  loop do
-                    case Curses.getch
-                    when Curses::KEY_RIGHT
-                      if board.cursor_x <= 20 && board.current_white_captured_piece.right_adjacent
-                        board.cursor_x += 3
-                        board.current_white_captured_piece = board.current_white_captured_piece.right_adjacent
-                      end
-                    when Curses::KEY_LEFT
-                      if board.cursor_x >= 5 && board.current_white_captured_piece.left_adjacent
-                        board.cursor_x -= 3
-                        board.current_white_captured_piece = board.current_white_captured_piece.left_adjacent
-                      end
-                    when 10
-                      board.current_square.current_piece = board.current_white_captured_piece
-                      board.cursor_x = aux_cursor_x
-                      board.cursor_y = aux_cursor_y
-                      break
-                    end
-                    board_renderer.render(board, @current_player, @available_positions, @message)
-                  end
                 end
               elsif @current_player == :Black
-                aux_cursor_x = board.cursor_x
-                aux_cursor_y = board.cursor_y
                 if board.current_square.top_adjacent.current_piece.is_a?(Pawn) && board.current_square.top_adjacent.current_piece.en_passant_target
                   opponent_squares_piece = opponent.active_squares[:pawn]
 
@@ -176,35 +147,6 @@ class Game
                   end
 
                   board.current_square.top_adjacent.current_piece = nil
-                elsif board.current_square.position[1] == 1
-                  aux_cursor_x = board.cursor_x
-                  aux_cursor_y = board.cursor_y
-                  board.cursor_x = 2
-                  board.cursor_y = 11
-                  board.current_black_captured_piece = board.black_captured_pieces
-                  @message = 'Choose a piece for promotion.'
-                  @available_positions = []
-                  board_renderer.render(board, @current_player, @available_positions, @message)
-                  loop do
-                    case Curses.getch
-                    when Curses::KEY_RIGHT
-                      if board.cursor_x <= 20 && board.current_black_captured_piece.right_adjacent
-                        board.cursor_x += 3
-                        board.current_black_captured_piece = board.current_black_captured_piece.right_adjacent
-                      end
-                    when Curses::KEY_LEFT
-                      if board.cursor_x >= 5 && board.current_black_captured_piece.left_adjacent
-                        board.cursor_x -= 3
-                        board.current_black_captured_piece = board.current_black_captured_piece.left_adjacent
-                      end
-                    when 10
-                      board.current_square.current_piece = board.current_black_captured_piece
-                      board.cursor_x = aux_cursor_x
-                      board.cursor_y = aux_cursor_y
-                      break
-                    end
-                    board_renderer.render(board, @current_player, @available_positions, @message)
-                  end
                 end
               end
             end
@@ -255,6 +197,42 @@ class Game
 
   private
 
+  def promotion_handler(board, board_renderer)
+    aux_cursor_x = board.cursor_x
+    aux_cursor_y = board.cursor_y
+    board.cursor_x = 2
+    board.cursor_y = @current_player == :White ? 1 : 11
+    active_player = @current_player.to_s.downcase
+    board.public_send("current_#{active_player}_captured_piece=", board.public_send("#{active_player}_captured_pieces"))
+    current_captured_piece = board.public_send("current_#{active_player}_captured_piece")
+    @message = 'Choose a piece for promotion.'
+    @available_positions = []
+    board_renderer.render(board, @current_player, @available_positions, @message)
+    loop do
+      key = Curses.getch
+      if key == 10
+        board.current_square.current_piece = current_captured_piece
+        board.cursor_x = aux_cursor_x
+        board.cursor_y = aux_cursor_y
+        break
+      end
+      current_captured_piece, shift = promotion_keypress_handler(key, current_captured_piece)
+      board.cursor_x += shift unless shift.zero?
+      board.public_send("current_#{active_player}_captured_piece=", current_captured_piece)
+      board_renderer.render(board, @current_player, @available_positions, @message)
+    end
+  end
+
+  def promotion_keypress_handler(key, current_piece)
+    case key
+    when Curses::KEY_RIGHT
+      return current_piece.right_adjacent, 3 if current_piece.right_adjacent
+    when Curses::KEY_LEFT
+      return current_piece.left_adjacent, -3 if current_piece.left_adjacent
+    end
+    [current_piece, 0]
+  end
+
   # Checks whether king is checked and returns the square which checks the king.
   def check_checkup(current_king)
     king_checked_rook = king_checked?(current_king, @inactive_player, ORTHOGONAL_DIRECTIONS, 'rook')
@@ -269,15 +247,27 @@ class Game
 
   def capture_handler(board)
     last_captured_piece = board.public_send("#{@inactive_player.to_s.downcase}_captured_pieces")
+    already_captured = false
+    tail = nil
     if last_captured_piece
-      last_captured_piece = last_captured_piece.right_adjacent until last_captured_piece.right_adjacent.nil?
-      #File.open("log.txt", "a") { |file| file.puts(last_captured_piece.symbol) }
-      last_captured_piece.right_adjacent = board.current_square.current_piece
-      last_captured_piece.right_adjacent.left_adjacent = last_captured_piece
+      while last_captured_piece
+        if last_captured_piece.symbol == board.current_square.current_piece.symbol
+          already_captured = true
+          break
+        else
+          tail = last_captured_piece
+          last_captured_piece = last_captured_piece.right_adjacent
+        end
+      end
+      unless already_captured
+        tail.right_adjacent = board.current_square.current_piece.dup
+        tail.right_adjacent.left_adjacent = tail
+      end
     else
-      board.public_send("#{@inactive_player.to_s.downcase}_captured_pieces=", board.current_square.current_piece)
+      board.public_send("#{@inactive_player.to_s.downcase}_captured_pieces=", board.current_square.current_piece.dup)
       #File.open("log.txt", "a") { |file| file.puts(board.public_send("#{@inactive_player.to_s.downcase}_captured_pieces").current_piece.symbol) }
     end
+    board.current_square.current_piece = nil
   end
 
   # Toggles the current's player color.

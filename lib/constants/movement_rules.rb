@@ -65,7 +65,7 @@ module CheckDetection
   # - Returns true if the opponent's pawn attacks the potential square.
   def attacked_by_pawn?(square, opponent_color)
     result = [false]
-    directions = opponent_color == 'White' ? %w[right_bottom_adjacent bottom_left_adjacent] : %w[left_top_adjacent top_right_adjacent]
+    directions = opponent_color == :White ? %w[right_bottom_adjacent bottom_left_adjacent] : %w[left_top_adjacent top_right_adjacent]
     start_square = square
     directions.each do |direction|
       square = square.public_send("#{direction}")
@@ -147,16 +147,4 @@ module CheckDetection
     end
     result
   end
-
-  
-
-  # MOVEMENT_RULES = {
-  #   pawn: ->(start_square) { generate_pawn_moves(start_square) },
-  #   rook: ->(start_square, opponent_color, directions) { generate_linear_moves(start_square, opponent_color, directions) },
-  #   knight: ->(start_square, opponent_color, directions) { generate_knight_moves(start_square, opponent_color, directions) },
-  #   bishop: ->(start_square, opponent_color, directions) { generate_linear_moves(start_square, opponent_color, directions) },
-  #   queen: ->(start_square, opponent_color, directions) { generate_linear_moves(start_square, opponent_color, directions) },
-  #   king: ->(start_square, opponent_color, directions, current_player) { generate_king_moves(start_square, opponent_color, directions, current_player) }
-  # }.freeze
 end
-

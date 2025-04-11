@@ -97,7 +97,7 @@ class BoardRenderer
     col = 3
    
     current_piece = board.black_captured_pieces
-    while current_piece
+    until current_piece.nil?
       @window.setpos(11, col)
       @window.addstr(current_piece.symbol)
       current_piece = current_piece.right_adjacent
