@@ -142,7 +142,7 @@ class Board
           white_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
           square.current_piece = King.new(:White)
-          white_player.active_squares[:king] = [square, false]
+          white_player.active_squares[:king] = [square]
         end
         square = square.right_adjacent
       when 2
@@ -150,7 +150,6 @@ class Board
         white_player.active_squares[:pawn].push(square)
         if square.position[0] == 'A'
           square = square.top_adjacent
-          white_player.active_squares[:pawn].push(square)
           next
         end
         square = square.left_adjacent
@@ -178,7 +177,7 @@ class Board
           black_player.active_squares[:queen] = [square]
         elsif square.position[0] == 'E'
           square.current_piece = King.new(:Black)
-          black_player.active_squares[:king] = [square, false]
+          black_player.active_squares[:king] = [square]
         end
         break if square.position == ['A', 8]
 
