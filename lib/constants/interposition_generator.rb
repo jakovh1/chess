@@ -2,16 +2,16 @@
 
 module InterpositionGenerator
   def generate_interposition_squares(attacking_square, king_square)
-    case attacking_square.current_piece
-    when '♖', '♜'
+    case attacking_square.current_piece.name
+    when :rook
       interposition_squares = attacking_rook(attacking_square, king_square)
-    when '♗', '♝'
+    when :bishop
       interposition_squares = attacking_bishop(attacking_square, king_square)
-    when '♛', '♕'
+    when :queen
       interposition_squares = attacking_square.position[0] == king_square.position[0] || attacking_square.position[1] == king_square.position[1] ? attacking_rook(attacking_square, king_square) : attacking_bishop(attacking_square, king_square)
-    when '♞', '♘'
+    when :knight
       interposition_squares = [attacking_square.position]
-    when '♙', '♟'
+    when :pawn
       interposition_squares = [attacking_square.position]
     end
     interposition_squares
