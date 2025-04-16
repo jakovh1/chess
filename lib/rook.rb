@@ -20,8 +20,4 @@ class Rook < Piece
   def generate_available_positions(start_square, opponent_color)
     generate_linear_moves(start_square, opponent_color, ORTHOGONAL_DIRECTIONS)
   end
-
-  def set_moved
-    @moved = true
-  end
 end

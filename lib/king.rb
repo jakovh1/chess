@@ -104,7 +104,7 @@ class King < Piece
     start_square = square
     (ORTHOGONAL_DIRECTIONS + DIAGONAL_DIRECTIONS).each do |direction|
       square = square.public_send("#{direction}_adjacent")
-      if square&.current_piece&.symbol == PIECE_UNICODE[opponent_color.to_sym][:king]
+      if square&.current_piece&.symbol == PIECE_UNICODE[opponent_color][:king]
         attacked = true
         break
       else
@@ -125,7 +125,7 @@ class King < Piece
     start_square = square
     directions.each do |direction|
       square = square.public_send("#{direction}")
-      if square&.current_piece&.symbol == PIECE_UNICODE[opponent_color.to_sym][:pawn]
+      if square&.current_piece&.symbol == PIECE_UNICODE[opponent_color][:pawn]
         result[0] = true
         result.push(square)
       else
@@ -140,7 +140,7 @@ class King < Piece
   # - Iterates through all possible movement directions, depending on the 'directions' parameter.
   # - Starting from the king's square, traverses through each direction until opponent's piece (rook, bishop or queen), it's own piece, or the end of the chess table is found.
   # - returns 'true' and opponent's square if it's occupied by a piece which checks the king, and 'false' otherwise.
-  def king_checked?(square, opponent_color, directions, opponent_figure)
+  def king_checked?(square, opponent_color, directions, opponent_piece)
     result = [false]
     start_square = square
     catch :exit_outer_loop do
@@ -151,10 +151,10 @@ class King < Piece
           if square.public_send("#{direction}_adjacent")&.current_piece.nil?
             square = square.public_send("#{direction}_adjacent")
 
-          elsif PIECE_UNICODE[opponent_color.to_sym][opponent_figure.to_sym] == square.public_send("#{direction}_adjacent").current_piece.symbol
+          elsif PIECE_UNICODE[opponent_color][opponent_piece.to_sym] == square.public_send("#{direction}_adjacent").current_piece.symbol
             result[0] = true
             result.push(square.public_send("#{direction}_adjacent"))
-            throw :exit_outer_loop if opponent_figure == 'queen'
+            throw :exit_outer_loop if opponent_piece == 'queen'
             break
           else
             break
@@ -193,7 +193,7 @@ class King < Piece
 
       branches.each do |branch|
         adjacent_square = square.public_send("#{branch}_adjacent")
-        next unless adjacent_square&.current_piece&.symbol == PIECE_UNICODE[opponent_color.to_sym][:knight]
+        next unless adjacent_square&.current_piece&.symbol == PIECE_UNICODE[opponent_color][:knight]
 
         result[0] = true
         result.push(adjacent_square)

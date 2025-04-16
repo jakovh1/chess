@@ -25,4 +25,4 @@ PIECE_UNICODE = {
     pawn:   '♟',
     king:   '♚'
   }
-}
+}.freeze

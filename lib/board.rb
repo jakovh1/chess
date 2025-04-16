@@ -7,7 +7,6 @@ require_relative './queen'
 require_relative './king'
 require_relative './knight'
 require_relative './rook'
-#require_relative './constants/figures'
 
 class Board
   attr_accessor :board, :cursor_x, :cursor_y, :current_square, :white_captured_pieces, :black_captured_pieces, :current_white_captured_piece, :current_black_captured_piece
@@ -21,16 +20,19 @@ class Board
     @current_white_captured_piece = @white_captured_pieces
     @black_captured_pieces = nil
     @current_black_captured_piece = @black_captured_pieces
-    generate_board(@board, white_player, black_player)
+    generate_board(white_player, black_player)
   end
 
   private
 
-  def generate_board(square, white_player, black_player)
-    last_square = square
-    last_square = generate_row(last_square) until last_square.position == ['A', 8]
-    last_square = establish_relationships(last_square) until last_square.position == ['A', 1]
-    place_pieces(last_square, white_player, black_player)
+  def generate_board(white_player, black_player)
+    square = @board
+    square = generate_square_row(square) until square.position == ['A', 8]
+    if square.position[1] == 8
+      square = square.right_adjacent until square.right_adjacent.nil?
+    end
+    square = establish_relationships(square) until square.position == ['A', 1]
+    place_pieces(white_player, black_player)
   end
 
   # toggles the square background color
@@ -40,151 +42,78 @@ class Board
     'black'
   end
 
-  # generates squares (nodes) in a row, returns the latest generated
-  def generate_row(square)
-    current_square = square
-    if current_square.position[0] == 'A'
+  def generate_square_row(square)
+    direction, destination_file, file_shift, new_link = square.position[0] == 'A' ? [:right_adjacent, 'H', 1, 'left_adjacent'] : [:left_adjacent, 'A', -1, 'right_adjacent']
 
-      unless current_square.right_adjacent.nil?
-        current_square.top_adjacent = Square.new(toggle_color(current_square), [current_square.position[0], current_square.position[1] + 1])
-        current_square.top_adjacent.bottom_adjacent = current_square
-        current_square = current_square.top_adjacent
-      end
-
-      until current_square.position[0] == 'H'
-        current_square.right_adjacent = Square.new(toggle_color(current_square), [(current_square.position[0].ord + 1).chr, current_square.position[1]])
-        current_square.right_adjacent.left_adjacent = current_square
-        current_square = current_square.right_adjacent
-      end
-
-    elsif current_square.position[0] == 'H' && !current_square.left_adjacent.nil?
-
-      current_square.top_adjacent = Square.new(toggle_color(current_square), [current_square.position[0], current_square.position[1] + 1])
-      current_square.top_adjacent.bottom_adjacent = current_square
-      current_square = current_square.top_adjacent
-
-      until current_square.position[0] == 'A'
-        current_square.left_adjacent = Square.new(toggle_color(current_square), [(current_square.position[0].ord - 1).chr, current_square.position[1]])
-        current_square.left_adjacent.right_adjacent = current_square
-        current_square = current_square.left_adjacent
-      end
+    until square.position[0] == destination_file
+      square.send("#{direction}=", Square.new(toggle_color(square), [(square.position[0].ord + file_shift).chr, square.position[1]]))
+      square.send(direction).send("#{new_link}=", square)
+      square = square.send(direction)
     end
+    return square if square.position == ['A', 8]
 
-    current_square
+    square.top_adjacent = Square.new(toggle_color(square), [square.position[0], square.position[1] + 1])
+    square.top_adjacent.bottom_adjacent = square
+    square.top_adjacent
   end
 
   def establish_relationships(square)
-    if square.position[1] == 8
-      square = square.right_adjacent until square.right_adjacent.nil?
-    end
-
     second_square = square.bottom_adjacent
-    # establishes relationships from the most-right square to the most-left square
-    if second_square.position[0] == 'H'
 
-      until second_square.position[0] == 'A'
-        second_square.left_top_adjacent = square.left_adjacent
-        square.left_adjacent.right_bottom_adjacent = second_square
+    adjacents, destination_file = second_square.position[0] == 'A' ? 
+    [['top_right_adjacent', 'right_adjacent', 'bottom_left_adjacent', 'left_top_adjacent', 'right_bottom_adjacent'], 'H'] : 
+    [['left_top_adjacent', 'left_adjacent', 'right_bottom_adjacent', 'top_right_adjacent', 'bottom_left_adjacent'], 'A']
 
-        second_square.left_adjacent.top_right_adjacent = square
-        square.bottom_left_adjacent = second_square.left_adjacent
+    until second_square.position[0] == destination_file
+      second_square.send("#{adjacents[0]}=", square.send(adjacents[1]))
+      square.send(adjacents[1]).send("#{adjacents[2]}=", second_square)
 
-        second_square.left_adjacent.top_adjacent = square.left_adjacent
-        square.left_adjacent.bottom_adjacent = second_square.left_adjacent
+      second_square.send(adjacents[1]).send("#{adjacents[3]}=", square)
+      square.send("#{adjacents[4]}=", second_square.send(adjacents[1]))
 
-        square = square.left_adjacent
-        second_square = second_square.left_adjacent
+      second_square.send(adjacents[1]).top_adjacent = square.send(adjacents[1])
+      square.send(adjacents[1]).bottom_adjacent = second_square.send(adjacents[1])
 
-      end
-    # establishes relationships from the most-right square to the most-left square
-    elsif second_square.position[0] == 'A'
-
-      until second_square.position[0] == 'H'
-        second_square.top_right_adjacent = square.right_adjacent
-        square.right_adjacent.bottom_left_adjacent = second_square
-
-        second_square.right_adjacent.left_top_adjacent = square
-        square.right_bottom_adjacent = second_square.right_adjacent
-
-        second_square.right_adjacent.top_adjacent = square.right_adjacent
-        square.right_adjacent.bottom_adjacent = second_square.right_adjacent
-
-        square = square.right_adjacent
-        second_square = second_square.right_adjacent
-      end
-
+      square = square.send(adjacents[1])
+      second_square = second_square.send(adjacents[1])
     end
-
     second_square
   end
+  
+  def place_pieces(white_player, black_player)
+    place_major_pieces(@current_square, 1, :White, white_player)
+    place_pawns(@current_square, 2, :White, white_player)
+    place_pawns(@current_square, 7, :Black, black_player)
+    place_major_pieces(@current_square, 8, :Black, black_player)
+  end
 
-  # Traverse through the board and place pieces onto their inital posiitons.
-  def place_pieces(square, white_player, black_player)
-    loop do
-      case square.position[1]
-      # 1 and 2 cases (ranks) place white pieces
-      when 1
-        if %w[A H].include?(square.position[0])
-          square.current_piece = Rook.new(:White)
-          white_player.active_squares[:rook].push(square)
-          if square.position[0] == 'H'
-            square = square.top_adjacent
-            next
-          end
-        elsif %w[B G].include?(square.position[0])
-          square.current_piece = Knight.new(:White)
-          white_player.active_squares[:knight].push(square)
-        elsif %w[C F].include?(square.position[0])
-          square.current_piece = Bishop.new(:White)
-          white_player.active_squares[:bishop].push(square)
-        elsif square.position[0] == 'D'
-          square.current_piece = Queen.new(:White)
-          white_player.active_squares[:queen] = [square]
-        elsif square.position[0] == 'E'
-          square.current_piece = King.new(:White)
-          white_player.active_squares[:king] = [square]
-        end
-        square = square.right_adjacent
-      when 2
-        square.current_piece = Pawn.new(:White)
-        white_player.active_squares[:pawn].push(square)
-        if square.position[0] == 'A'
-          square = square.top_adjacent
-          next
-        end
-        square = square.left_adjacent
-      # 7 and 8 cases (ranks) place black pieces
-      when 7
-        square.current_piece = Pawn.new(:Black)
-        black_player.active_squares[:pawn].push(square)
-        if square.position[0] == 'H'
-          square = square.top_adjacent
-          next
-        end
-        square = square.right_adjacent
-      when 8
-        if %w[A H].include?(square.position[0])
-          square.current_piece = Rook.new(:Black)
-          black_player.active_squares[:rook].push(square)
-        elsif %w[B G].include?(square.position[0])
-          square.current_piece = Knight.new(:Black)
-          black_player.active_squares[:knight].push(square)
-        elsif %w[C F].include?(square.position[0])
-          square.current_piece = Bishop.new(:Black)
-          black_player.active_squares[:bishop].push(square)
-        elsif square.position[0] == 'D'
-          square.current_piece = Queen.new(:Black)
-          black_player.active_squares[:queen] = [square]
-        elsif square.position[0] == 'E'
-          square.current_piece = King.new(:Black)
-          black_player.active_squares[:king] = [square]
-        end
-        break if square.position == ['A', 8]
-
-        square = square.left_adjacent
+  def place_major_pieces(square, rank, color, player)
+    square = square.top_adjacent while square.position[1] < rank
+    piece_order = %i[rook knight bishop queen king bishop knight rook]
+    piece_classes = {
+      rook: Rook,
+      knight: Knight,
+      bishop: Bishop,
+      queen: Queen,
+      king: King
+    }
+    piece_order.each do |piece|
+      square.current_piece = piece_classes[piece].new(color)
+      if %i[rook knight bishop].include?(piece)
+        player.active_squares[piece].push(square)
       else
-        square = square.top_adjacent
+        player.active_squares[piece] = [square]
       end
+      square = square.right_adjacent
+    end
+  end
+
+  def place_pawns(square, rank, color, player)
+    square = square.top_adjacent while square.position[1] < rank
+    while square
+      square.current_piece = Pawn.new(color)
+      player.active_squares[:pawn].push(square)
+      square = square.right_adjacent
     end
   end
 end

@@ -18,15 +18,15 @@ class Game
 
 
   def initialize
-    @current_player = :White
-    @inactive_player = :Black
     @winner = nil
-    @clipboard_figure = nil
+    @selected_piece = nil
     @old_square = nil
     @new_square = nil
     @available_positions = []
-    @white_player = Player.new('white')
-    @black_player = Player.new('black')
+    @white_player = Player.new(:White)
+    @black_player = Player.new(:Black)
+    @current_player = @white_player
+    @inactive_player = @black_player
     @message = nil
   end
 
@@ -41,15 +41,11 @@ class Game
       is_king_checked = [false, []]
 
       loop do
-        
-
         # Stores the current king's square in the variable to access it later for check checkup
-        current_king = instance_variable_get("@#{@current_player.to_s.downcase}_player").active_squares[:king].first
-        active_player = instance_variable_get("@#{@current_player.to_s.downcase}_player")
+        current_king = @current_player.active_squares[:king].first
+        #active_player = instance_variable_get("@#{@current_player.to_s.downcase}_player")
         # active_player.active_squares.each do |key, value|
-          
         #   value.each do |square|
-            
         #     File.open("log.txt", "a") do |file|
         #       #file.puts "Name: #{key}, Type: #{value.class}, Length: #{value.length}"
         #       file.puts(square) if key == :queen
@@ -57,24 +53,20 @@ class Game
         #       file.puts(square.position) if key == :queen
         #     end
         #   end
-        
         # end
         # Checks whether current king is checked.
         is_king_checked = check_checkup(current_king)
         if is_king_checked[0]
           @message = 'The king is checked.'
-          if checkmate_lookup(is_king_checked, current_king, active_player)
-            @message = "Checkmate. #{@inactive_player.to_s} player has won the game."
-            board_renderer.render(board, @current_player, @available_positions, @message)
+          if checkmate_lookup(is_king_checked, current_king)
+            @winner = true
+            @message = "Checkmate. #{@inactive_player.color.to_s} player has won the game."
+            board_renderer.render(board, @current_player.color.to_s, @available_positions, @message)
             break
           end
         end
-
-        
-
-
         # Renders the board to the terminal.
-        board_renderer.render(board, @current_player, @available_positions, @message)
+        board_renderer.render(board, @current_player.color.to_s, @available_positions, @message)
 
         case Curses.getch
         when Curses::KEY_UP
@@ -101,111 +93,63 @@ class Game
           current_piece = board.current_square.current_piece
           # The following block will be executed if king is not checked, and current player's piece is selected.
           # It generates available positions for selected piece.
-          if @clipboard_figure.nil? && current_piece&.color == @current_player
+          if @selected_piece.nil? && current_piece&.color == @current_player.color
 
-            @available_positions = current_piece.generate_available_positions(board.current_square, @inactive_player)
+            @available_positions = current_piece.generate_available_positions(board.current_square, @inactive_player.color)
             filter_available_positions(board, current_king) if current_piece.name != :king
             unless @available_positions.empty?
 
-              @clipboard_figure = current_piece
+              @selected_piece = current_piece
               @old_square = board.current_square
               @message = 'Press "u" if you want to unselect currently selected piece.'
             end
 
           # The following block moves selected piece and captures the opponent's piece if it occupies selected square.
-          elsif @available_positions.include?(board.current_square.position) # && !@clipboard_figure.nil?
-
-            # Retrieves player's objects to access them later to update piece's positions
-            player = instance_variable_get("@#{@current_player.to_s.downcase}_player")
-            opponent = instance_variable_get("@#{@inactive_player.to_s.downcase}_player")
+          elsif @available_positions.include?(board.current_square.position) # && !@selected_piece.nil?
 
             # Checks whether selected square is occupied by opponent's piece and deletes (captures) it if it is.
-            if @inactive_player == current_piece&.color && current_piece.name != :king
+            if @inactive_player.color == current_piece&.color && current_piece.name != :king
 
-              opponent_squares_piece = opponent.active_squares[PIECE_UNICODE[@inactive_player].key(board.current_square.current_piece.symbol)]
-
-              opponent_squares_piece.each_with_index do |piece, i|
-                if piece.position == board.current_square.position
-                  opponent_squares_piece.delete(opponent_squares_piece[i])
-                  break
-                end
-              end
+              delete_active_square(current_piece, board)
               capture_handler(board) if current_piece.name != :pawn
             end
-            
-            # Puts player's selected piece onto the selected square.
-            board.current_square.current_piece = @clipboard_figure
 
-            # Turns the en_passant flag on if the pawn is moved 2 squares
-            if board.current_square.current_piece.is_a?(Pawn) && (board.current_square.position[1] - @old_square.position[1]).abs == 2
-              board.current_square.current_piece.en_passant_target = true
-              player.recently_moved_pawn = board.current_square.current_piece
-            end
+            # Puts player's selected piece onto the selected square.
+            board.current_square.current_piece = @selected_piece
+            current_piece = board.current_square.current_piece
             @old_square.current_piece = nil
 
-            
-            if board.current_square.current_piece.is_a?(Pawn)
-              potential_opponent_pawn = @current_player == :White ? board.current_square.bottom_adjacent : board.current_square.top_adjacent
-              # Promotion handler
-              if [1, 8].include?(board.current_square.position[1])
-                promotion_handler(board, board_renderer, active_player)
-                player.active_squares[board.current_square.current_piece.name].push(board.current_square)
-
-              # En passant handler
-              elsif potential_opponent_pawn.current_piece.is_a?(Pawn) && potential_opponent_pawn.current_piece.en_passant_target
-                opponent_squares_pawn = opponent.active_squares[:pawn]
-                opponent_squares_pawn.each_with_index do |piece, i|
-                  if piece.position == potential_opponent_pawn.position
-                    opponent_squares_pawn.delete(opponent_squares_pawn[i])
-                    break
-                  end
-                end
-                potential_opponent_pawn.current_piece = nil
-              end
+            case current_piece
+            when Pawn
+              promotion(board, board_renderer)
+              handle_en_passant(board)
+              handle_double_step(board, current_piece)
+            when King
+              castling(board) if %w[C G].include?(board.current_square.position[0]) && !current_piece.moved
+              current_piece.moved = true
+            when Rook
+              current_piece.moved = true
             end
 
-            # Handles the castling
-            if board.current_square.current_piece.name == :king && board.current_square.current_piece.moved == false
-              castling_handler(board, player) if %[C G].include?(board.current_square.position[0])
-              board.current_square.current_piece.moved = true
-            end
-            player.active_squares[board.current_square.current_piece.name].each do |square, i|
-              if @old_square.position == square.position
-                player.active_squares[board.current_square.current_piece.name].delete(i)
-              end
-            end
-            update_piece_squares(player, board.current_square)
+            update_piece_squares(board.current_square)
 
-            # if !player.active_squares[:king][1] && %w[A H].include?(@old_square.position[0]) && !player.public_send("#{@old_square.position[0].downcase}_rook_moved") && ['♖', '♜'].include?(@clipboard_figure)
-            #   player.public_send("#{@old_square.position[0].downcase}_rook_moved=", true)
-            # end
-            if opponent.recently_moved_pawn
-              opponent.recently_moved_pawn.en_passant_target = false
-              opponent.recently_moved_pawn = nil
-            end
+            reset_en_passant_flag
 
             # Reseting everything to nil for the next move.
-            @clipboard_figure = nil
-            #@old_square = nil
-            toggle_current_player
-            @available_positions = []
-            @message = nil
+            reset_to_nil
+            @current_player, @inactive_player = @inactive_player, @current_player
           end
 
         # The following block unselects selected piece.
         when 'u', 'U'
-          @clipboard_figure = nil
-          @available_positions = []
-          #@old_square = nil
-          @message = nil
-
+          reset_to_nil
         # Terminates the game.
         when 'q', 'Q'
           break
         end
       end
     ensure
-      sleep 7
+      sleep 7 if @winner
       Curses.clear
       Curses.refresh
       Curses.close_screen
@@ -215,20 +159,65 @@ class Game
 
   private
 
-  def checkmate_lookup(is_checked, current_king, active_player)
+  def reset_to_nil
+    @selected_piece = nil
+    @available_positions = []
+    @message = nil
+  end
+
+  def reset_en_passant_flag
+    return unless @inactive_player.recently_moved_pawn
+
+    @inactive_player.recently_moved_pawn.en_passant_target = false
+    @inactive_player.recently_moved_pawn = nil
+  end
+
+  def delete_active_square(current_piece, board)
+    opponent_active_squares = @inactive_player.active_squares[current_piece.name]
+
+    opponent_active_squares.each_with_index do |square, i|
+      if square.position == board.current_square.position
+        opponent_active_squares.delete(opponent_active_squares[i])
+        break
+      end
+    end
+  end
+
+  def handle_double_step(board, current_piece)
+    return unless (board.current_square.position[1] - @old_square.position[1]).abs == 2
+
+    current_piece.en_passant_target = true
+    @current_player.recently_moved_pawn = current_piece
+  end
+
+  def handle_en_passant(board)
+    potential_opponent_pawn = @current_player.color == :White ? board.current_square.bottom_adjacent : board.current_square.top_adjacent
+    return unless potential_opponent_pawn.current_piece.is_a?(Pawn) && potential_opponent_pawn.current_piece.en_passant_target
+
+    opponent_pawn_squares = @inactive_player.active_squares[:pawn]
+    opponent_pawn_squares.each_with_index do |square, i|
+      if square.position == potential_opponent_pawn.position
+        opponent_pawn_squares.delete(opponent_pawn_squares[i])
+        break
+      end
+    end
+    potential_opponent_pawn.current_piece = nil
+  end
+
+  def checkmate_lookup(is_checked, current_king)
     checkmate = true
-    king_available_positions = current_king.current_piece.generate_available_positions(current_king, @inactive_player)
+    king_available_positions = current_king.current_piece.generate_available_positions(current_king, @inactive_player.color)
     return nil unless king_available_positions.empty?
 
     attacker = is_checked[1].select { |subarray| subarray.first == true }
     return checkmate if attacker.length > 1
 
     interpositions = generate_interposition_squares(attacker[0][1], current_king)
-    active_player.active_squares.each do |key, value|
+    @current_player.active_squares.each do |key, value|
       value.each do |square|
         next if square.current_piece.name == :king
 
-        available_positions = square.current_piece.generate_available_positions(square, @inactive_player)
+        available_positions = square.current_piece.generate_available_positions(square, @inactive_player.color)
         available_positions = interpositions & available_positions
         checkmate = false unless available_positions.empty?
         break unless checkmate
@@ -238,14 +227,17 @@ class Game
     checkmate
   end
 
-  def promotion_handler(board, board_renderer, active_player)
+  def promotion(board, board_renderer)
+    return unless [1, 8].include?(board.current_square.position[1])
+
     aux_cursor_x = board.cursor_x
     aux_cursor_y = board.cursor_y
     board.cursor_x = 2
-    board.cursor_y = @current_player == :White ? 1 : 11
+    board.cursor_y = @current_player.color == :White ? 1 : 11
+    current_color = @current_player.color.to_s.downcase
     #active_player = @current_player.to_s.downcase
-    board.public_send("current_#{active_player.color}_captured_piece=", board.public_send("#{active_player.color}_captured_pieces"))
-    current_captured_piece = board.public_send("current_#{active_player.color}_captured_piece")
+    board.public_send("current_#{current_color}_captured_piece=", board.public_send("#{current_color}_captured_pieces"))
+    current_captured_piece = board.public_send("current_#{current_color}_captured_piece")
     @message = 'Choose a piece for promotion.'
     @available_positions = []
     board_renderer.render(board, @current_player, @available_positions, @message)
@@ -253,9 +245,10 @@ class Game
       key = Curses.getch
       if key == 10
         board.current_square.current_piece = current_captured_piece
-        active_player.active_squares[:pawn].each_with_index do |square, i|
+        @current_player.active_squares[board.current_square.current_piece.name].push(board.current_square)
+        @current_player.active_squares[:pawn].each_with_index do |square, i|
           if board.current_square.position == square.position
-            active_player.active_squares[:pawn].delete(i)
+            @current_player.active_squares[:pawn].delete(i)
             break
           end
         end
@@ -265,8 +258,8 @@ class Game
       end
       current_captured_piece, shift = promotion_keypress_handler(key, current_captured_piece)
       board.cursor_x += shift unless shift.zero?
-      board.public_send("current_#{active_player.color}_captured_piece=", current_captured_piece)
-      board_renderer.render(board, @current_player, @available_positions, @message)
+      board.public_send("current_#{current_color}_captured_piece=", current_captured_piece)
+      board_renderer.render(board, @current_player.color.to_s, @available_positions, @message)
     end
   end
 
@@ -282,18 +275,18 @@ class Game
 
   # Checks whether king is checked and returns the square which checks the king.
   def check_checkup(current_king)
-    king_checked_rook = king_checked?(current_king, @inactive_player, ORTHOGONAL_DIRECTIONS, 'rook')
-    king_checked_bishop = king_checked?(current_king, @inactive_player, DIAGONAL_DIRECTIONS, 'bishop')
-    king_checked_queen = king_checked?(current_king, @inactive_player, ORTHOGONAL_DIRECTIONS + DIAGONAL_DIRECTIONS, 'queen')
-    king_checked_knight = attacked_by_knight?(current_king, @inactive_player)
-    king_checked_pawn = attacked_by_pawn?(current_king, @inactive_player)
+    king_checked_rook = king_checked?(current_king, @inactive_player.color, ORTHOGONAL_DIRECTIONS, 'rook')
+    king_checked_bishop = king_checked?(current_king, @inactive_player.color, DIAGONAL_DIRECTIONS, 'bishop')
+    king_checked_queen = king_checked?(current_king, @inactive_player.color, ORTHOGONAL_DIRECTIONS + DIAGONAL_DIRECTIONS, 'queen')
+    king_checked_knight = attacked_by_knight?(current_king, @inactive_player.color)
+    king_checked_pawn = attacked_by_pawn?(current_king, @inactive_player.color)
 
     is_king_checked = king_checked_queen[0] || king_checked_rook[0] || king_checked_bishop[0] || king_checked_knight[0] || king_checked_pawn[0]
     [is_king_checked, [king_checked_rook, king_checked_bishop, king_checked_knight, king_checked_pawn, king_checked_queen]]
   end
 
   def capture_handler(board)
-    last_captured_piece = board.public_send("#{@inactive_player.to_s.downcase}_captured_pieces")
+    last_captured_piece = board.public_send("#{@inactive_player.color.to_s.downcase}_captured_pieces")
     already_captured = false
     tail = nil
     if last_captured_piece
@@ -311,34 +304,21 @@ class Game
         tail.right_adjacent.left_adjacent = tail
       end
     else
-      board.public_send("#{@inactive_player.to_s.downcase}_captured_pieces=", board.current_square.current_piece.dup)
+      board.public_send("#{@inactive_player.color.to_s.downcase}_captured_pieces=", board.current_square.current_piece.dup)
       #File.open("log.txt", "a") { |file| file.puts(board.public_send("#{@inactive_player.to_s.downcase}_captured_pieces").current_piece.symbol) }
     end
     board.current_square.current_piece = nil
   end
 
-  # Toggles the current's player color.
-  def toggle_current_player
-    if @current_player == :White
-      @current_player = :Black
-      @inactive_player = :White
-    else
-      @current_player = :White
-      @inactive_player = :Black
-    end
-  end
-
   # Updates the player's piece and its new square.
-  def update_piece_squares(player, square)
-    case @clipboard_figure.symbol
+  def update_piece_squares(square)
+    case @selected_piece.symbol
     when '♛', '♕'
-      player.active_squares[:queen] = [square]
+      @current_player.active_squares[:queen] = [square]
     when '♔', '♚'
-      player.active_squares[:king] = [square]
-      #player.active_squares[:king][1] = true unless player.active_squares[:king][1]
+      @current_player.active_squares[:king] = [square]
     else
-      
-      active_squares_piece = player.active_squares[@clipboard_figure.name]
+      active_squares_piece = @current_player.active_squares[@selected_piece.name]
       active_squares_piece.each_with_index do |figure, i|
         if figure.position == @old_square.position
           active_squares_piece[i] = square
@@ -348,32 +328,11 @@ class Game
     end
   end
 
-  # Generates available positions for a selected non-king piece in the case of a check.
-  def generate_movable_positions(interpositions, player_pieces_object, current_square)
-    result = []
-    key = current_square.current_piece.name
-    directions = DIRECTION_RULES[key]
-    player_pieces_object[key].each do |figure|
-      if current_square.position == figure.position
-        available_positions = key != :pawn ? MOVEMENT_RULES[key].call(figure, @inactive_player, directions) : MOVEMENT_RULES[key].call(figure)
-        result = interpositions & available_positions
-      end
-    end
-    if result.empty?
-      @message = 'Unavailable piece was selected.'
-    else
-      @available_positions = result
-      @clipboard_figure = current_square.current_piece
-      @old_square = current_square
-      @message = 'Press "u" if you want to unselect currently selected piece'
-    end
-  end
-
   # Handles the castling
-  def castling_handler(board, player)
+  def castling(board)
     new_square = nil
     aux_old_square = @old_square
-    aux_clipboard_figure = @clipboard_figure
+    aux_selected_piece = @selected_piece
     if board.current_square.position[0] == 'G'
       board.current_square.left_adjacent.current_piece = board.current_square.right_adjacent.current_piece
       board.current_square.right_adjacent.current_piece = nil
@@ -385,10 +344,11 @@ class Game
       new_square = board.current_square.right_adjacent
       @old_square = board.current_square.left_adjacent.left_adjacent
     end
-    @clipboard_figure = new_square.current_piece
-    update_piece_squares(player, new_square)
+    @selected_piece = new_square.current_piece
+    @selected_piece.moved = true
+    update_piece_squares(new_square)
     @old_square = aux_old_square
-    @clipboard_figure = aux_clipboard_figure
+    @selected_piece = aux_selected_piece
   end
 
   def filter_available_positions(board, king)
