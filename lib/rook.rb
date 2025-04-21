@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative './piece'
-require_relative './constants/movement_rules'
+require_relative './modules/linear_movement'
 require_relative './constants/directions'
 
 class Rook < Piece
@@ -17,7 +17,7 @@ class Rook < Piece
     @right_adjacent = nil
   end
 
-  def generate_available_positions(start_square, opponent_color)
-    generate_linear_moves(start_square, opponent_color, ORTHOGONAL_DIRECTIONS)
+  def generate_available_positions(start_square, opponent_color, current_king)
+    generate_linear_moves(start_square, opponent_color, ORTHOGONAL_DIRECTIONS, current_king)
   end
 end

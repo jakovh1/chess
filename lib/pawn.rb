@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require_relative './piece'
+require_relative './modules/check_detector'
 
 class Pawn < Piece
+  include CheckDetector
+
   attr_accessor :en_passant_target
 
   def initialize(color)
@@ -14,7 +17,7 @@ class Pawn < Piece
   # - Adds forward movement if the square is empty. *(1)
   # - Adds a double step if the pawn is on its initial rank and both squares are empty. *(2)
   # - Adds diagonal squares if an opponent's piece is present. *(3)
-  def generate_available_positions(start_square, opponent_color)
+  def generate_available_positions(start_square, opponent_color, current_king)
     positions = []
     initial_rank = opponent_color == :White ? 7 : 2
     directions = opponent_color == :Black ? %w[top_adjacent top_right_adjacent left_top_adjacent] : %w[bottom_adjacent right_bottom_adjacent bottom_left_adjacent]
@@ -46,6 +49,6 @@ class Pawn < Piece
     # *(3)
     positions.push(right_capture.position) if right_capture&.current_piece&.color == opponent_color && right_capture.current_piece.name != :king
     positions.push(left_capture.position) if left_capture&.current_piece&.color == opponent_color && left_capture.current_piece.name != :king
-    positions
+    filter_available_positions(positions, start_square, current_king, opponent_color)
   end
 end

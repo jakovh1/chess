@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'curses'
-require_relative './constants/figures'
-
 class BoardRenderer
   include Curses
 
@@ -23,28 +20,18 @@ class BoardRenderer
 
   def render(board, current_player, available_positions = nil, message = nil)
     @window.clear
-    show_current_player(current_player)
     draw_ranks
     draw_files
-    draw_squares(board)
+    draw_squares(board.board)
     highlight_available_positions(available_positions) if available_positions
-    show_message(message) if message
-    show_captured_pieces(board) if board.white_captured_pieces || board.black_captured_pieces
+    show_text(message, current_player)
+    show_captured_pieces(board.white_captured_pieces, 1) if board.white_captured_pieces
+    show_captured_pieces(board.black_captured_pieces, 11) if board.black_captured_pieces
     draw_cursor(board)
     @window.refresh
   end
 
-  def close
-    Curses.close_screen
-  end
-
   private
-
-  def show_current_player(color)
-    Curses.setpos(0, 0)
-    Curses.curs_set(1)
-    Curses.addstr("#{color} player has the move.")
-  end
 
   def draw_cursor(board)
     Curses.curs_set(2)
@@ -79,73 +66,58 @@ class BoardRenderer
     end
   end
 
-  def show_message(message)
+  def show_text(message, color)
+    @window.setpos(0, 0)
+    Curses.curs_set(1)
+    @window.addstr("#{color} player has the move.")
+    return unless message
+
     @window.setpos(13, 2)
     @window.addstr(message)
   end
 
-  def show_captured_pieces(board)
+  def show_captured_pieces(captured_pieces, row)
     col = 3
-    
-    current_piece = board.white_captured_pieces
-    until current_piece.nil?
-      @window.setpos(1, col)
-      @window.addstr(current_piece.symbol)
-      current_piece = current_piece.right_adjacent
-      col += 3
-    end
-    col = 3
-   
-    current_piece = board.black_captured_pieces
-    until current_piece.nil?
-      @window.setpos(11, col)
-      @window.addstr(current_piece.symbol)
-      current_piece = current_piece.right_adjacent
+    captured_piece = captured_pieces
+    until captured_piece.nil?
+      @window.setpos(row, col)
+      @window.addstr(captured_piece.symbol)
+      captured_piece = captured_piece.right_adjacent
       col += 3
     end
   end
 
-  def draw_squares(board)
-    square = board.board
+  def draw_squares(bottom_square)
+    square = bottom_square
     square = square.top_adjacent until square.top_adjacent.nil?
     @window.setpos(0, 1)
 
     loop do
-
-      if square.position[0] == 'A'
-        column = 2
-        loop do
-
-          row = 10 - square.position[1]
-          color = square.color == 'black' ? 2 : 1
-          @window.setpos(row, column)
-          @window.attron(Curses.color_pair(color)) do
-            @window.addstr(" #{square.current_piece&.symbol || ' '} ")
-          end
-          column += 3
-          break if square.position[0] == 'H'
-
-          square = square.right_adjacent
-        end
-      elsif square.position[0] == 'H'
-        column = 23
-        loop do
-
-          row = 10 - square.position[1]
-          color = square.color == 'black' ? 2 : 1
-          @window.setpos(row, column)
-          @window.attron(Curses.color_pair(color)) do
-            @window.addstr(" #{square.current_piece&.symbol || ' '} ")
-          end
-          column -= 3
-          break if square.position[0] == 'A'
-
-          square = square.left_adjacent
-        end
-      end
+      square = draw_square_row(square)
       break if square.position == ['A', 1]
 
       square = square.bottom_adjacent
+    end
+  end
+
+  def draw_square_row(square)
+    column, next_square, last_square_file, column_offset = square.position[0] == 'A' ? [2, :right_adjacent, 'H', 3] : [23, :left_adjacent, 'A', -3]
+    loop do
+      draw_square(square, column)
+      column += column_offset
+      break if square.position[0] == last_square_file
+
+      square = square.send(next_square)
+    end
+    square
+  end
+
+  def draw_square(square, column)
+    row = 10 - square.position[1]
+    color = square.color == 'black' ? 2 : 1
+    @window.setpos(row, column)
+    @window.attron(Curses.color_pair(color)) do
+      @window.addstr(" #{square.current_piece&.symbol || ' '} ")
     end
   end
 
@@ -165,31 +137,4 @@ class BoardRenderer
   def translate_position(position)
     [3 * position[0].ord - 193, -2 * position[1] + 10 + position[1]]
   end
-
-  # def log_positions(board)
-  #   square = board.board
-  #   square = square.top_adjacent until square.top_adjacent.nil?
-  #   p square.position[1]
-  #   loop do
-  #     if square.position[0] == 'A'
-        
-  #       loop do
-  #         puts "#{square.position[0]} #{square.position[1]}"
-  #         break if square.position[0] == 'H'
-
-  #         square = square.right_adjacent
-  #       end
-        
-  #     elsif square.position[0] == 'H'
-  #       loop do
-  #         puts "#{square.position[0]} #{square.position[1]}"
-        
-
-  #         square = square.left_adjacent
-  #       end
-  #     end
-  #     break if square.left_adjacent.nil? && square.position == ['A', 1]
-  #     square = square.bottom_adjacent
-  #   end
-  # end
 end

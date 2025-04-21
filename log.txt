@@ -1,2 +1,4 @@
-White
-queen
+false
+false
+true
+false

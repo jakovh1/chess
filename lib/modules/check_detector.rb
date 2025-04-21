@@ -1,44 +1,41 @@
 # frozen_string_literal: true
 
-require_relative './figures'
-require_relative './directions'
+require_relative '../constants/symbols'
+require_relative '../constants/directions'
 
-module LinearMovement
+require_relative './interposition_generator'
 
-  # Generates all possible legal moves for rooks, bishops and queens.
-  # - Iterates through all linear (sliding) movement directions.
-  # - For each direction, calls '#linear_traversal' method which returns a 2d array with legal positions.
-  # - '#flat_map' enumerable flattens the many 2d arrays into 1 2d array.
-  def generate_linear_moves(start_square, opponent_color, directions)
-    directions.flat_map do |direction|
-      linear_traversal(start_square, direction, opponent_color)
+module CheckDetector
+  include Directions
+  include Symbols
+
+  include InterpositionGenerator
+
+  def filter_available_positions(positions, square, current_king, opponent_color)
+    aux_variable = square.current_piece
+    square.current_piece = nil
+    is_king_checked = check_checkup(current_king, opponent_color)
+
+    if is_king_checked[0]
+      attacker = is_king_checked[1].select { |piece| piece.first == true }
+      interpositions = generate_interposition_squares(attacker[0][1], current_king)
+      positions = interpositions & positions
     end
-  end
-
-  # Generates all possible squares (positions) for the given direction.
-  # - Traverses in a given direction and adds position of the square to the result array
-  # - if the square is empty or occupied by the opponent's piece.
-  def linear_traversal(start_square, direction, opponent_color)
-    positions = []
-    loop do
-      break if start_square.public_send("#{direction}_adjacent").nil?
-
-      if start_square.public_send("#{direction}_adjacent")&.current_piece.nil?
-        positions.push(start_square.public_send("#{direction}_adjacent").position)
-        start_square = start_square.public_send("#{direction}_adjacent")
-      elsif Object.const_get("#{opponent_color.upcase}_FIGURES").include?(start_square.public_send("#{direction}_adjacent").current_piece.symbol)
-        positions.push(start_square.public_send("#{direction}_adjacent").position)
-        break
-      else
-        break
-      end
-    end
+    square.current_piece = aux_variable
     positions
   end
-end
 
-module CheckDetection
-  include Directions
+  # Checks whether king is checked and returns the square which checks the king.
+  def check_checkup(current_king, opponent_color)
+    king_checked_rook = king_checked?(current_king, opponent_color, ORTHOGONAL_DIRECTIONS, :rook)
+    king_checked_bishop = king_checked?(current_king, opponent_color, DIAGONAL_DIRECTIONS, :bishop)
+    king_checked_queen = king_checked?(current_king, opponent_color, ORTHOGONAL_DIRECTIONS + DIAGONAL_DIRECTIONS, :queen)
+    king_checked_knight = attacked_by_knight?(current_king, opponent_color)
+    king_checked_pawn = attacked_by_pawn?(current_king, opponent_color)
+
+    is_king_checked = king_checked_queen[0] || king_checked_rook[0] || king_checked_bishop[0] || king_checked_knight[0] || king_checked_pawn[0]
+    [is_king_checked, [king_checked_rook, king_checked_bishop, king_checked_knight, king_checked_pawn, king_checked_queen]]
+  end
   # Checks if the opponent's king attacks the given square where the king might move.
   # - Iterates through all possible movement directions of the king.
   # - Checks whether opponent's king occupies the given square.
@@ -48,7 +45,7 @@ module CheckDetection
     start_square = square
     (ORTHOGONAL_DIRECTIONS + DIAGONAL_DIRECTIONS).each do |direction|
       square = square.public_send("#{direction}_adjacent")
-      if square&.current_piece&.symbol == PIECE_UNICODE[opponent_color.to_sym][:king]
+      if square&.current_piece&.symbol == SYMBOLS[opponent_color][:king]
         attacked = true
         break
       else
@@ -69,7 +66,7 @@ module CheckDetection
     start_square = square
     directions.each do |direction|
       square = square.public_send("#{direction}")
-      if square&.current_piece&.symbol == PIECE_UNICODE[opponent_color.to_sym][:pawn]
+      if square&.current_piece&.symbol == SYMBOLS[opponent_color][:pawn]
         result[0] = true
         result.push(square)
       else
@@ -95,7 +92,7 @@ module CheckDetection
           if square.public_send("#{direction}_adjacent")&.current_piece.nil?
             square = square.public_send("#{direction}_adjacent")
 
-          elsif PIECE_UNICODE[opponent_color.to_sym][opponent_figure.to_sym] == square.public_send("#{direction}_adjacent").current_piece.symbol
+          elsif SYMBOLS[opponent_color][opponent_figure.to_sym] == square.public_send("#{direction}_adjacent").current_piece.symbol
             result[0] = true
             result.push(square.public_send("#{direction}_adjacent"))
             throw :exit_outer_loop if opponent_figure == 'queen'
@@ -137,7 +134,7 @@ module CheckDetection
 
       branches.each do |branch|
         adjacent_square = square.public_send("#{branch}_adjacent")
-        next unless adjacent_square&.current_piece&.symbol == PIECE_UNICODE[opponent_color.to_sym][:knight]
+        next unless adjacent_square&.current_piece&.symbol == SYMBOLS[opponent_color.to_sym][:knight]
 
         result[0] = true
         result.push(adjacent_square)

@@ -2,7 +2,7 @@
 
 require_relative './piece'
 require_relative './constants/directions'
-require_relative './constants/movement_rules'
+require_relative './modules/linear_movement'
 
 class Queen < Piece
   include Directions
@@ -16,7 +16,7 @@ class Queen < Piece
     @right_adjacent = nil
   end
 
-  def generate_available_positions(start_square, opponent_color)
-    generate_linear_moves(start_square, opponent_color, DIAGONAL_DIRECTIONS + ORTHOGONAL_DIRECTIONS)
+  def generate_available_positions(start_square, opponent_color, current_king)
+    generate_linear_moves(start_square, opponent_color, DIAGONAL_DIRECTIONS + ORTHOGONAL_DIRECTIONS, current_king)
   end
 end

@@ -2,10 +2,14 @@
 
 require_relative './piece'
 require_relative './constants/directions'
-require_relative './constants/movement_rules'
+require_relative './constants/symbols'
+require_relative './modules/check_detector'
 
 class Knight < Piece
   include Directions
+  include Symbols
+
+  include CheckDetector
 
   attr_accessor :left_adjacent, :right_adjacent
 
@@ -19,9 +23,9 @@ class Knight < Piece
   # - Iterates through all possible L-shape movement directions.
   # - For each direction, calls '#knight_traversal' method which returns a 2d array with legal positions.
   # - '#flat_map' enumerable flattens the many 2d arrays into 1 2d array.
-  def generate_available_positions(start_square, opponent_color)
+  def generate_available_positions(start_square, opponent_color, current_king)
     ORTHOGONAL_DIRECTIONS.flat_map do |direction|
-      knight_traversal(start_square, direction, opponent_color)
+      knight_traversal(start_square, direction, opponent_color, current_king)
     end
   end
 
@@ -29,24 +33,24 @@ class Knight < Piece
   # - Moves 2 squares in the given direction and 1 square perpendicular.
   # - Checks if a destination square is either empty or contains opponent's piece.
   # - Adds position of the square to the result if yes.
-  def knight_traversal(start_square, direction, opponent_color)
+  def knight_traversal(start_square, direction, opponent_color, current_king)
+    square = start_square
     positions = []
     2.times do
-      return positions if start_square.public_send("#{direction}_adjacent").nil?
+      return positions if square.public_send("#{direction}_adjacent").nil?
 
-      start_square = start_square.public_send("#{direction}_adjacent")
+      square = square.public_send("#{direction}_adjacent")
     end
 
     branches = %w[top bottom].include?(direction) ? %w[right left] : %w[top bottom]
 
     branches.each do |branch|
-      adjacent_square = start_square.public_send("#{branch}_adjacent")
+      adjacent_square = square.public_send("#{branch}_adjacent")
       if adjacent_square && (adjacent_square.current_piece.nil? ||
-                            Object.const_get("#{opponent_color.upcase}_FIGURES").include?(adjacent_square.current_piece.symbol))
+                            SYMBOLS[opponent_color].values.include?(adjacent_square.current_piece.symbol))
         positions.push(adjacent_square.position)
       end
     end
-    positions
+    filter_available_positions(positions, start_square, current_king, opponent_color)
   end
-
 end
