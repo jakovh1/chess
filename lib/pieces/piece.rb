@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative './constants/symbols'
+require_relative '../constants/symbols'
 
 class Piece
   include Symbols

@@ -1,9 +1,9 @@
 # frozen_string_literal = true
 
 require_relative './piece'
-require_relative './constants/directions'
-require_relative './constants/symbols'
-require_relative './modules/check_detector'
+require_relative '../constants/directions'
+require_relative '../constants/symbols'
+require_relative '../modules/check_detector'
 
 class Knight < Piece
   include Directions

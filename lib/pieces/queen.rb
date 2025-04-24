@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require_relative './piece'
-require_relative './constants/directions'
-require_relative './modules/linear_movement'
+require_relative '../constants/directions'
+require_relative '../modules/linear_movement'
 
 class Queen < Piece
   include Directions

@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 require_relative './square'
-require_relative './pawn'
-require_relative './bishop'
-require_relative './queen'
-require_relative './king'
-require_relative './knight'
-require_relative './rook'
+require_relative './pieces/pawn'
+require_relative './pieces/bishop'
+require_relative './pieces/queen'
+require_relative './pieces/king'
+require_relative './pieces/knight'
+require_relative './pieces/rook'
 
 class Board
   attr_accessor :board, :cursor_x, :cursor_y, :current_square, :white_captured_pieces, :black_captured_pieces, :current_white_captured_piece, :current_black_captured_piece

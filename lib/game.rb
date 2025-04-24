@@ -5,7 +5,6 @@ require 'curses'
 require_relative './board'
 require_relative './board_renderer'
 require_relative './player'
-require_relative './pawn'
 
 require_relative './constants/directions'
 

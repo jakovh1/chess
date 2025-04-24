@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative './piece'
-require_relative './modules/check_detector'
+require_relative '../modules/check_detector'
 
 class Pawn < Piece
   include CheckDetector
