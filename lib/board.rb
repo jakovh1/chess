@@ -79,7 +79,7 @@ class Board
     end
     second_square
   end
-  
+
   def place_pieces(white_player, black_player)
     place_major_pieces(@current_square, 1, :White, white_player)
     place_pawns(@current_square, 2, :White, white_player)
