@@ -1,5 +1,6 @@
 # ♟️ Chess
 
+
 ## 🛠️ Installation
 0. Make sure that Ruby and Bundler are installed.
 1. Install dependencies:
@@ -19,6 +20,7 @@
    ruby main.rb
    ```
 
+
 ## 🎮 How To Play
 - Use arrow keys to move the cursor.
 - Press <kbd>Enter</kbd> to select a piece.
@@ -28,27 +30,32 @@
 - Press <kbd>l</kbd> to load the game.
 - Press <kbd>q</kbd> to quit.
 
+
 ## 💾 Saving and Loading
 - Saved games are stored in the `lib/saves/` directory.
 - Saved games use a timestamped `.marshal` format.
 - Load menu allows you to select a save file using arrow keys and <kbd>Enter</kbd>.
 
+
 ## 📁 Project Structure
+```text
 chess/
 ├── Gemfile
 ├── Gemfile.lock
 ├── lib/
-│   ├── board.rb
-│   ├── board_renderer.rb
-│   ├── constants/
-│   ├── game.rb
-│   ├── modules/
-│   ├── pieces/
-│   ├── player.rb
-│   ├── saves/
-│   └── square.rb
+│   ├── board.rb
+│   ├── board_renderer.rb
+│   ├── constants/
+│   ├── game.rb
+│   ├── modules/
+│   ├── pieces/
+│   ├── player.rb
+│   ├── saves/
+│   └── square.rb
 ├── main.rb
 └── README.md
+```
+
 
 ## 🧠 Features
 - Full chess logic: check, checkmate, stalemate, draw
@@ -57,9 +64,10 @@ chess/
 - Keyboard-based navigation (Curses)
 - 2-player mode
 
+
 ## 🚧 Future Improvements
 - Timer support
 
+
 ## 📄 License
 [MIT](https://www.mit.edu/~amini/LICENSE.md)
-
