@@ -31,6 +31,26 @@ class BoardRenderer
     @window.refresh
   end
 
+  def render_load_menu(saves, current_row)
+    saves_length = saves.length
+    Curses.curs_set(0)
+    @window.clear
+    saves.each_with_index do |filename, index|
+      if current_row == index
+        attron(color_pair(1) | A_BOLD) do
+          @window.setpos(index, 0)
+          @window.addstr("#{index + 1} #{filename[0..-9]}")
+        end
+      else
+        @window.setpos(index, 0)
+        @window.addstr("#{index + 1} #{filename[0..-9]}")
+      end
+    end
+    @window.setpos(saves_length + 1, 0)
+    @window.addstr('Select the game you want to load. (↑, ↓, ↵).')
+    @window.refresh
+  end
+
   private
 
   def draw_cursor(board)

@@ -12,6 +12,8 @@ require_relative './constants/directions'
 require_relative './modules/check_detector'
 require_relative './modules/interposition_generator'
 require_relative './modules/draw_detector'
+require_relative './modules/game_saver'
+require_relative './modules/game_loader'
 
 class Game
   include Curses
@@ -19,6 +21,8 @@ class Game
   include InterpositionGenerator
   include DrawDetector
   include Directions
+  include GameSaver
+  include GameLoader
 
   SQUARE_HEIGHT = 1
   SQUARE_WIDTH = 3
@@ -33,7 +37,9 @@ class Game
     @current_player = @white_player
     @inactive_player = @black_player
     @current_king = nil
-    @message = nil
+    @message = ''
+    @any_saved_game = contains_saved_games?
+    @message_extension = " Press 's' to save the game. #{@any_saved_game ? "Press 'l' to load a game." : ''}"
   end
 
   def play
@@ -46,7 +52,7 @@ class Game
       board_renderer.render(board, @current_player)
       @current_king = @current_player.active_squares[:king].first
       loop do
-        board_renderer.render(board, @current_player.color.to_s, @available_positions, @message)
+        board_renderer.render(board, @current_player.color.to_s, @available_positions, @message + @message_extension)
 
         case Curses.getch
         when Curses::KEY_UP
@@ -73,6 +79,14 @@ class Game
           handle_enter_key(board, board_renderer)
         when 'u', 'U'
           reset_to_nil
+        when 's', 'S'
+          @message = 'The game has been saved successfully.' if save_game(board, @selected_piece, @old_square, @available_positions, @white_player, @black_player, @current_player, @inactive_player, @current_king, @message)
+          @any_saved_game = contains_saved_games? unless @any_saved_game
+        when 'l', 'L'
+          game_name = game_selection(get_saved_games, board_renderer)
+          game_data = load_game(game_name)
+          board = game_data[:board]
+          assign_game_state(game_data)
         when 'q', 'Q'
           break
         end
@@ -90,6 +104,19 @@ class Game
   end
 
   private
+
+  def assign_game_state(game_data)
+    @game_state = game_data[:game_state]
+    @selected_piece = game_data[:selected_piece]
+    @old_square = game_data[:old_square]
+    @available_positions = game_data[:available_positions]
+    @white_player = game_data[:white_player]
+    @black_player = game_data[:black_player]
+    @current_player = game_data[:current_player]
+    @inactive_player = game_data[:inactive_player]
+    @current_king = game_data[:current_king]
+    @message = 'The game has been loaded successfully.'
+  end
 
   def handle_enter_key(board, board_renderer)
     current_piece = board.current_square.current_piece
@@ -192,7 +219,7 @@ class Game
   def reset_to_nil
     @selected_piece = nil
     @available_positions = []
-    @message = nil
+    @message = ''
   end
 
   def reset_en_passant_flag
