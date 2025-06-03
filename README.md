@@ -3,13 +3,13 @@
 
 ## 🛠️ Installation
 0. Make sure that Ruby and Bundler are installed.
-1. Install dependencies:
-   ```bash
-   bundle install
-   ```
-2. Clone the repository:
+1. Clone the repository:
    ```bash
    git clone https://github.com/jakovh1/chess.git
+   ```
+2. Install dependencies:
+   ```bash
+   bundle install
    ```
 3. Enter the project directory:
    ```bash
