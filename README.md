@@ -7,13 +7,13 @@
    ```bash
    git clone https://github.com/jakovh1/chess.git
    ```
-2. Install dependencies:
-   ```bash
-   bundle install
-   ```
-3. Enter the project directory:
+2. Enter the project directory:
    ```bash
    cd chess
+   ```
+3. Install dependencies:
+   ```bash
+   bundle install
    ```
 4. Run the game:
    ```bash
